@@ -15,8 +15,14 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.http import HttpResponse
+from django.urls import path, include
+
+def home_view(request):
+    return HttpResponse("<h1>Welcome to FlexiPlan Backend</h1>")
 
 urlpatterns = [
+    path('', home_view),  # Default route for /
     path('admin/', admin.site.urls),
+    path('api/', include('core.urls')),
 ]
