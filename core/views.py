@@ -18,7 +18,6 @@ class SignupView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# Login View
 class LoginView(APIView):
     permission_classes = []  # Allow unauthenticated access
 
@@ -26,12 +25,23 @@ class LoginView(APIView):
         username = request.data.get("username")
         password = request.data.get("password")
 
-        user = authenticate(username=username, password=password)  # Uses the custom User model
+        # Authenticate the user using the provided username and password
+        user = authenticate(username=username, password=password)
+
         if user:
+            # Generate refresh and access tokens for the authenticated user
             refresh = RefreshToken.for_user(user)
+
+            # Return the response with tokens and user data
             return Response({
                 "refresh": str(refresh),
                 "access": str(refresh.access_token),
+                "user": {  # Include user-specific details here
+                    "id": user.id,
+                    "email": user.email,
+                    "username": user.username
+                }
             }, status=status.HTTP_200_OK)
 
+        # If authentication fails, return an error message
         return Response({"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
