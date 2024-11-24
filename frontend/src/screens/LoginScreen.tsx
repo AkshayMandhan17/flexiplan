@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { View, Text, Alert, StyleSheet, Dimensions } from "react-native";
 import { Input, Button, Icon } from "react-native-elements";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
+import { useAuth } from "../components/AuthContext";
 // Primary Color and topColor Adjustments
 const primaryColor = "#0096F6"; // Primary Blue
 const topColor = "#9dbfb6"; // Darkened color for the top part (darker for button and link)
@@ -20,6 +20,8 @@ const LoginScreen = ({ navigation }: any) => {
     username?: string;
     password?: string;
   }>({});
+
+  const { setIsLoggedIn } = useAuth();
 
   const handleLogin = async () => {
     // Reset errors
@@ -48,7 +50,6 @@ const LoginScreen = ({ navigation }: any) => {
           password,
         }),
       });
-
       const data = await response.json();
 
       if (response.ok) {
@@ -56,9 +57,9 @@ const LoginScreen = ({ navigation }: any) => {
         await AsyncStorage.setItem("access_token", data.access);
         await AsyncStorage.setItem("refresh_token", data.refresh);
         await AsyncStorage.setItem("user_username", data.user.username);
-
+        setIsLoggedIn(true);
         // Navigate to HomeScreen after login
-        navigation.replace("Home"); // Replaces the current screen with Home
+        navigation.replace("RoutineSetup"); // Replaces the current screen with Home
       } else {
         Alert.alert("Error", data.error || "Invalid credentials!");
       }
