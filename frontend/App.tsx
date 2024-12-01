@@ -6,6 +6,7 @@ import LoginScreen from './src/screens/LoginScreen';
 import TabNavigator from './src/components/TabNavigator';
 import { AuthProvider, useAuth } from './src/components/AuthContext';
 import RoutineSetupScreen from './src/screens/RoutineSetupScreen';
+import ChatScreen from './src/screens/ChatScreen';
 
 const Stack = createStackNavigator();
 
@@ -24,6 +25,7 @@ const AppNavigator = () => {
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="TabNavigator" component={TabNavigator} />
           <Stack.Screen name="RoutineSetup" component={RoutineSetupScreen}/>
+          <Stack.Screen name="ChatScreen" component={ChatScreen}/>
         </Stack.Navigator>
     </NavigationContainer>
   );
