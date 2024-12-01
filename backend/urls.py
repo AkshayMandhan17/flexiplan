@@ -25,4 +25,5 @@ urlpatterns = [
     path('', home_view),  # Default route for /
     path('admin/', admin.site.urls),
     path('api/', include('core.urls')),
+    path('api/', include('routine_setup.urls')),
 ]

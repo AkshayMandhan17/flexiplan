@@ -59,7 +59,7 @@ const LoginScreen = ({ navigation }: any) => {
         await AsyncStorage.setItem("user_username", data.user.username);
         setIsLoggedIn(true);
         // Navigate to HomeScreen after login
-        navigation.replace("RoutineSetup"); // Replaces the current screen with Home
+        navigation.replace("TabNavigator"); // Replaces the current screen with Home
       } else {
         Alert.alert("Error", data.error || "Invalid credentials!");
       }

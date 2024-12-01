@@ -52,14 +52,13 @@ class UserRoutine(models.Model):
         unique_together = ('user', 'routine')  # Prevent duplicate entries
 
 
-# Tasks Table
 class Task(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="tasks")
     routine = models.ForeignKey(Routine, on_delete=models.CASCADE, related_name="tasks", null=True, blank=True)
     task_name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
-    start_time = models.TimeField()
-    end_time = models.TimeField()
+    time_required = models.DurationField(blank=True, null=True)  # Stores duration of the task
+    days_associated = models.JSONField(default=list)  # List of days the task is repeated
     priority = models.CharField(max_length=50, choices=[('High', 'High'), ('Medium', 'Medium'), ('Low', 'Low')])
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -80,7 +79,7 @@ class UserSetting(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="settings")
     off_day_toggle = models.BooleanField(default=False)
     notifications_enabled = models.BooleanField(default=True)
-
+    day_start_time = models.TimeField(null=True, blank=True)
 
 # UserStatus Table
 class UserStatus(models.Model):
