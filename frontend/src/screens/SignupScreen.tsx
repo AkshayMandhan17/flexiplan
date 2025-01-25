@@ -39,7 +39,7 @@ const SignupScreen = ({ navigation }: any) => {
     }
 
     try {
-      const response = await fetch("http://192.168.100.21:8000/api/signup/", {
+      const response = await fetch("http://172.16.82.225:8000/api/signup/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -54,7 +54,6 @@ const SignupScreen = ({ navigation }: any) => {
       const data = await response.json();
 
       if (response.ok) {
-        // Navigate to Login screen after successful signup
         navigation.navigate("Login");
       } else {
         Alert.alert("Error", data.error || "Something went wrong!");
@@ -66,16 +65,14 @@ const SignupScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.container}>
-      {/* Top Color Section */}
       <View style={[styles.topSection, { backgroundColor: topColor }]}>
-        {/* Logo can go here if needed */}
         <Text style={styles.topText}>Sign Up</Text>
       </View>
 
-      {/* White Overlay with Form */}
+   
       <View style={styles.overlay}>
         <View style={styles.formContainer}>
-          {/* Input Fields */}
+          
           <Input
             placeholder="Username"
             value={username}
@@ -89,7 +86,7 @@ const SignupScreen = ({ navigation }: any) => {
                 color="#666"
                 size={scaleSize(24)}
               />
-            } // Ensure size is 24
+            } 
             leftIconContainerStyle={styles.iconContainer}
           />
 
@@ -107,7 +104,7 @@ const SignupScreen = ({ navigation }: any) => {
                 color="#666"
                 size={scaleSize(20)}
               />
-            } // Ensure size is 24
+            }
             leftIconContainerStyle={styles.iconContainer}
           />
 
@@ -125,11 +122,11 @@ const SignupScreen = ({ navigation }: any) => {
                 color="#666"
                 size={scaleSize(26)}
               />
-            } // Ensure size is 24
+            } 
             leftIconContainerStyle={styles.iconContainer}
           />
 
-          {/* Show generic error message if any */}
+          
           {genericError ? (
             <Text style={styles.genericError}>{genericError}</Text>
           ) : null}
@@ -161,18 +158,18 @@ const styles = StyleSheet.create({
     backgroundColor: topColor,
   },
   topSection: {
-    height: "30%", // Takes up the top 30% of the screen
+    height: "30%", 
     justifyContent: "center",
     alignItems: "center",
   },
   topText: {
     fontSize: scaleSize(30),
     fontWeight: "bold",
-    color: "white", // White text color for top section
+    color: "white",
   },
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.9)", // White overlay with slight transparency
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     padding: scaleSize(20),
@@ -186,29 +183,29 @@ const styles = StyleSheet.create({
     marginBottom: scaleSize(15),
   },
   inputError: {
-    borderColor: "red", // Highlight error fields in red
+    borderColor: "red",
     borderWidth: 1,
   },
   iconContainer: {
-    marginRight: scaleSize(10), // Space between icon and input field
+    marginRight: scaleSize(10),
   },
   signupButton: {
-    backgroundColor: topColor, // Darker button color
+    backgroundColor: topColor, 
     borderRadius: scaleSize(5),
     width: scaleSize(300),
   },
   loginContainer: {
     flexDirection: "row",
     marginTop: scaleSize(15),
-    alignItems: "center", // Align text and button
+    alignItems: "center", 
   },
   loginLink: {
-    color: topColor, // Darker color for the login link
+    color: topColor, 
     fontWeight: "bold",
     fontSize: scaleSize(16),
   },
   genericError: {
-    color: "red", // Show error message in red
+    color: "red", 
     marginBottom: scaleSize(20),
     fontSize: scaleSize(15),
   },

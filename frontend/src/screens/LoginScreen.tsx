@@ -3,14 +3,13 @@ import { View, Text, Alert, StyleSheet, Dimensions } from "react-native";
 import { Input, Button, Icon } from "react-native-elements";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "../components/AuthContext";
-// Primary Color and topColor Adjustments
-const primaryColor = "#0096F6"; // Primary Blue
-const topColor = "#9dbfb6"; // Darkened color for the top part (darker for button and link)
+
+const primaryColor = "#0096F6"; 
+const topColor = "#9dbfb6";
 
 const { width, height } = Dimensions.get("window");
-const scale = width / 375; // Assuming the base screen size is 375 (like iPhone 6)
+const scale = width / 375;
 
-// Helper function for scaling
 const scaleSize = (size: number) => Math.round(size * scale);
 
 const LoginScreen = ({ navigation }: any) => {
@@ -24,10 +23,8 @@ const LoginScreen = ({ navigation }: any) => {
   const { setIsLoggedIn } = useAuth();
 
   const handleLogin = async () => {
-    // Reset errors
     setErrors({});
 
-    // Validation
     let formErrors = {};
     if (!username)
       formErrors = { ...formErrors, username: "Username is required" };
@@ -40,7 +37,7 @@ const LoginScreen = ({ navigation }: any) => {
     }
 
     try {
-      const response = await fetch("http://192.168.100.21:8000/api/login/", {
+      const response = await fetch("http://172.16.82.225:8000/api/login/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -53,13 +50,11 @@ const LoginScreen = ({ navigation }: any) => {
       const data = await response.json();
 
       if (response.ok) {
-        // Save the user data in AsyncStorage
         await AsyncStorage.setItem("access_token", data.access);
         await AsyncStorage.setItem("refresh_token", data.refresh);
         await AsyncStorage.setItem("user_username", data.user.username);
         setIsLoggedIn(true);
-        // Navigate to HomeScreen after login
-        navigation.replace("TabNavigator"); // Replaces the current screen with Home
+        navigation.replace("TabNavigator"); 
       } else {
         Alert.alert("Error", data.error || "Invalid credentials!");
       }
@@ -70,12 +65,10 @@ const LoginScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.container}>
-      {/* Top Color Section */}
       <View style={[styles.topSection, { backgroundColor: topColor }]}>
         <Text style={styles.title}>Login</Text>
       </View>
 
-      {/* White Overlay with Form */}
       <View style={styles.overlay}>
         <View style={styles.formContainer}>
           <Input
@@ -125,7 +118,7 @@ const LoginScreen = ({ navigation }: any) => {
               title="Sign Up"
               type="clear"
               titleStyle={styles.signupLink}
-              onPress={() => navigation.navigate("Signup")} // Navigate to Signup screen
+              onPress={() => navigation.navigate("Signup")}
             />
           </View>
         </View>
@@ -140,7 +133,7 @@ const styles = StyleSheet.create({
     backgroundColor: topColor,
   },
   topSection: {
-    height: "30%", // Takes up the top 30% of the screen
+    height: "30%",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -151,7 +144,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.9)", // White overlay with slight transparency
+    backgroundColor: "rgba(255, 255, 255, 0.9)", 
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     padding: scaleSize(20),
@@ -165,20 +158,20 @@ const styles = StyleSheet.create({
     marginBottom: scaleSize(15),
   },
   iconContainer: {
-    marginRight: scaleSize(10), // Space between icon and input field
+    marginRight: scaleSize(10),
   },
   loginButton: {
-    backgroundColor: topColor, // Darker button color
+    backgroundColor: topColor,
     borderRadius: scaleSize(5),
     width: scaleSize(300),
   },
   signupContainer: {
     flexDirection: "row",
     marginTop: scaleSize(15),
-    alignItems: "center", // Align text and button
+    alignItems: "center",
   },
   signupLink: {
-    color: topColor, // Darker color for the signup link
+    color: topColor,
     fontWeight: "bold",
     fontSize: scaleSize(16),
   },

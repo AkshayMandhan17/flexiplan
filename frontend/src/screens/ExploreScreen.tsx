@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,19 +7,53 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons'; // For the "+" button icon
+  ActivityIndicator,
+  Image,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons"; // For the "+" button icon
+import { fetchHobbies } from "../utils/api"; // Import the API function
+import { Hobby } from "../utils/model";
+const categories = ["Art", "Sports", "Music", "Tech", "Travel", "Cooking"]; // Example categories
 
-const categories = ['Art', 'Sports', 'Music', 'Tech', 'Travel', 'Cooking']; // Example categories
-const hobbies = [
-  { id: '1', name: 'Painting', category: 'Art' },
-  { id: '2', name: 'Football', category: 'Sports' },
-  { id: '3', name: 'Guitar', category: 'Music' },
-  { id: '4', name: 'Programming', category: 'Tech' },
-  { id: '5', name: 'Photography', category: 'Travel' },
-];
+// Category-to-image mapping
+const categoryImages: { [key: string]: string } = {
+  Art: "https://via.placeholder.com/100x100?text=Art",
+  Sports: "https://via.placeholder.com/100x100?text=Sports",
+  Music: "https://via.placeholder.com/100x100?text=Music",
+  Tech: "https://via.placeholder.com/100x100?text=Tech",
+  Travel: "https://via.placeholder.com/100x100?text=Travel",
+  Cooking: "https://via.placeholder.com/100x100?text=Cooking",
+  Default: "https://via.placeholder.com/100x100?text=Hobby", // Default image
+};
 
 const ExploreHobbiesScreen = () => {
+  const [hobbies, setHobbies] = useState<Hobby[]>();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadHobbies = async () => {
+      try {
+        const data = await fetchHobbies();
+        setHobbies(data);
+      } catch (error) {
+        console.error("Failed to load hobbies:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadHobbies();
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#9dbfb6" />
+        <Text>Loading hobbies...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* Top Section */}
@@ -38,11 +72,16 @@ const ExploreHobbiesScreen = () => {
       <FlatList
         data={hobbies}
         numColumns={2}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <View style={styles.card}>
             {/* Placeholder for the image */}
             <View style={styles.cardImagePlaceholder}>
+              {/* Use the Image component to display a placeholder image */}
+              <Image
+                source={{ uri: categoryImages[item.category] || categoryImages["Default"] }}
+                style={{ width: "100%", height: "100%", borderRadius: 8 }}
+              />
               <TouchableOpacity style={styles.addButton}>
                 <Ionicons name="add" size={20} color="#fff" />
               </TouchableOpacity>
@@ -64,38 +103,38 @@ const ExploreHobbiesScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   searchSection: {
-    height: '20%',
-    backgroundColor: '#f5f5f5',
+    height: "20%",
+    backgroundColor: "#f5f5f5",
     paddingHorizontal: 16,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   searchBar: {
     height: 40,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 20,
     paddingHorizontal: 16,
     marginTop: 20,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
   },
   categoryTabs: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginTop: 8,
     marginBottom: 35,
   },
   categoryTab: {
-    backgroundColor: '#e0e0e0',
+    backgroundColor: "#e0e0e0",
     paddingVertical: 4,
     paddingHorizontal: 12,
     borderRadius: 16,
     marginRight: 8,
   },
   categoryText: {
-    color: '#333',
+    color: "#333",
     fontSize: 14,
   },
   cardsContainer: {
@@ -105,43 +144,49 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     margin: 8,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 8,
-    overflow: 'hidden',
-    elevation: 3, // For shadow on Android
-    shadowColor: '#000', // For shadow on iOS
+    overflow: "hidden",
+    elevation: 3,
+    shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowRadius: 5,
     shadowOffset: { width: 0, height: 2 },
   },
   cardImagePlaceholder: {
     height: 100,
-    backgroundColor: '#e0e0e0',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#e0e0e0",
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
   },
   addButton: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 5,
     right: 5,
-    backgroundColor: '#9dbfb6',
+    backgroundColor: "#9dbfb6",
     borderRadius: 20,
     padding: 6,
   },
   cardTextContainer: {
     padding: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    fontWeight: "bold",
+    textAlign: "center",
   },
   cardCategory: {
     fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
     marginTop: 4,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
 

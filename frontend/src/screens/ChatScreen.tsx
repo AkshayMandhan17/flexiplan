@@ -11,7 +11,7 @@ import {
 
 const ChatScreen = () => {
   const friendName = "Akshay";
-  const friendAvatar= "https://via.placeholder.com/50"; // Pass name and avatar from Social Tab
+  const friendAvatar= "https://via.placeholder.com/50";
   const [messages, setMessages] = useState([
     { id: '1', text: 'Hi there!', sender: false, time: '10:00 AM' },
     { id: '2', text: 'Hello! How are you?', sender: true, time: '10:01 AM' },

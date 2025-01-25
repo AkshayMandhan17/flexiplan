@@ -11,7 +11,7 @@ import ChatScreen from './src/screens/ChatScreen';
 const Stack = createStackNavigator();
 
 const AppNavigator = () => {
-  const { isLoggedIn } = useAuth(); // Consume the auth context
+  const { isLoggedIn } = useAuth();
 
   return (
     <NavigationContainer>
