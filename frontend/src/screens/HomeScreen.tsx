@@ -1,45 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
   FlatList,
   StyleSheet,
   TouchableOpacity,
-  Image,
   ScrollView,
-} from 'react-native';
-import { ProgressBar } from 'react-native-paper'; // Install react-native-paper for progress bars
-import { Checkbox } from 'react-native-paper'; // Or any other checkbox component
+} from "react-native";
+import { ProgressBar } from "react-native-paper"; // Progress bars
+import { Checkbox } from "react-native-paper"; // Checkbox
+import { Swipeable } from "react-native-gesture-handler"; // Swipeable for swipe actions
+import { Ionicons } from "@expo/vector-icons"; // For delete icon
 
 const HomeScreen = () => {
   // Mock data for routines
   const [routines, setRoutines] = useState([
-    { id: '1', name: 'This Week', emoji: '☀️', progress: 0.4 },
-    { id: '2', name: 'Jatin Routine', emoji: '😎', progress: 0 },
-    { id: '3', name: 'Fitness', emoji: '💪', progress: 0.7 },
+    { id: "1", name: "This Week", emoji: "☀️", progress: 0.4 },
+    { id: "2", name: "Jatin Routine", emoji: "😎", progress: 0 },
+    { id: "3", name: "Fitness", emoji: "💪", progress: 0.7 },
   ]);
+
+  // State for active routine
+  const [activeRoutine, setActiveRoutine] = useState("1"); // Default active routine is "This Week"
 
   // Mock data for today's tasks
   const [tasks, setTasks] = useState([
     {
-      id: '1',
-      name: 'Drink Water',
-      emoji: '💧',
-      timeRange: '7:00 - 8:00',
+      id: "1",
+      name: "Drink Water",
+      emoji: "💧",
+      timeRange: "7:00 - 8:00",
       completed: false,
     },
     {
-      id: '2',
-      name: 'Walking',
-      emoji: '🚶‍♂️',
-      timeRange: '8:00 - 8:30',
+      id: "2",
+      name: "Walking",
+      emoji: "🚶‍♂️",
+      timeRange: "8:00 - 8:30",
       completed: false,
     },
     {
-      id: '3',
-      name: 'Make Coffee',
-      emoji: '☕',
-      timeRange: '8:30 - 9:00',
+      id: "3",
+      name: "Make Coffee",
+      emoji: "☕",
+      timeRange: "8:30 - 9:00",
       completed: false,
     },
   ]);
@@ -53,15 +57,27 @@ const HomeScreen = () => {
     );
   };
 
+  // Remove a task from the list
+  const removeTask = (id: string) => {
+    setTasks((prev) => prev.filter((task) => task.id !== id));
+  };
+
+  // Render the delete action for Swipeable
+  const renderRightActions = () => (
+    <View style={styles.fullDeleteBackground}>
+      <Ionicons name="trash" size={24} color="#fff" />
+    </View>
+  );
+
   return (
     <ScrollView style={styles.container}>
       {/* Routines Section */}
       <View style={styles.section}>
         <View style={styles.header}>
           <Text style={styles.heading}>Routines</Text>
-          <TouchableOpacity>
+          {/* <TouchableOpacity>
             <Text style={styles.seeAll}>See All</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
         <FlatList
           data={routines}
@@ -69,42 +85,58 @@ const HomeScreen = () => {
           keyExtractor={(item) => item.id}
           showsHorizontalScrollIndicator={false}
           renderItem={({ item }) => (
-            <View style={styles.routineCard}>
-              <View style={styles.avatar}>
-                <Text style={styles.emoji}>{item.emoji}</Text>
+            <TouchableOpacity activeOpacity={1} onPress={() => setActiveRoutine(item.id)}>
+              <View
+                style={[
+                  styles.routineCard,
+                  activeRoutine === item.id && styles.activeRoutineCard,
+                ]}
+              >
+                <View style={styles.avatar}>
+                  <Text style={styles.emoji}>{item.emoji}</Text>
+                </View>
+                <Text style={styles.routineName}>{item.name}</Text>
+                <ProgressBar
+                  progress={item.progress}
+                  color="#76c7c0"
+                  style={styles.progressBar}
+                />
+                <Text style={styles.progressText}>
+                  {Math.round(item.progress * 100)}% Complete
+                </Text>
               </View>
-              <Text style={styles.routineName}>{item.name}</Text>
-              <ProgressBar
-                progress={item.progress}
-                color="#76c7c0"
-                style={styles.progressBar}
-              />
-              <Text style={styles.progressText}>
-                {Math.round(item.progress * 100)}% Complete
-              </Text>
-            </View>
+            </TouchableOpacity>
           )}
         />
       </View>
 
       {/* Today's To Do Section */}
       <View style={styles.section}>
-        <Text style={styles.heading}>Today's To Do</Text>
+        <View style={styles.header}>
+          <Text style={styles.heading}>Today's To Do</Text>
+          <Text style={styles.dateText}>Dec 11 • Wednesday</Text>
+        </View>
         {tasks.map((task) => (
-          <View key={task.id} style={styles.taskItem}>
-            <View style={styles.taskAvatar}>
-              <Text style={styles.taskEmoji}>{task.emoji}</Text>
+          <Swipeable
+            key={task.id}
+            renderRightActions={renderRightActions}
+            onSwipeableRightOpen={() => removeTask(task.id)}
+          >
+            <View style={styles.taskItem}>
+              <View style={styles.taskAvatar}>
+                <Text style={styles.taskEmoji}>{task.emoji}</Text>
+              </View>
+              <View style={styles.taskDetails}>
+                <Text style={styles.taskName}>{task.name}</Text>
+                <Text style={styles.taskTime}>{task.timeRange}</Text>
+              </View>
+              <Checkbox
+                status={task.completed ? "checked" : "unchecked"}
+                onPress={() => toggleTask(task.id)}
+                color="#76c7c0"
+              />
             </View>
-            <View style={styles.taskDetails}>
-              <Text style={styles.taskName}>{task.name}</Text>
-              <Text style={styles.taskTime}>{task.timeRange}</Text>
-            </View>
-            <Checkbox
-              status={task.completed ? 'checked' : 'unchecked'}
-              onPress={() => toggleTask(task.id)}
-              color="#76c7c0"
-            />
-          </View>
+          </Swipeable>
         ))}
       </View>
     </ScrollView>
@@ -116,48 +148,60 @@ export default HomeScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: "#f9f9f9",
     paddingHorizontal: 16,
   },
   section: {
     marginVertical: 16,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   heading: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   seeAll: {
     fontSize: 14,
-    color: '#76c7c0',
+    color: "#76c7c0",
+  },
+  dateText: {
+    fontSize: 14,
+    color: "#333",
   },
   routineCard: {
     width: 150,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
     marginRight: 16,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 0,
     elevation: 4,
     margin: 8,
   },
+  activeRoutineCard: {
+    shadowColor: "#76c7c0",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    borderWidth: 2,
+    borderColor: "#76c7c0",
+  },
   avatar: {
-    backgroundColor: '#eef6f7',
+    backgroundColor: "#eef6f7",
     width: 50,
     height: 50,
     borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    alignSelf: 'center',
+    justifyContent: "center",
+    alignItems: "center",
+    alignSelf: "center",
     marginBottom: 8,
   },
   emoji: {
@@ -165,41 +209,36 @@ const styles = StyleSheet.create({
   },
   routineName: {
     fontSize: 14,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    fontWeight: "bold",
+    textAlign: "center",
     marginBottom: 8,
   },
   progressBar: {
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: "#e0e0e0",
     marginBottom: 4,
   },
   progressText: {
     fontSize: 12,
-    textAlign: 'center',
-    color: '#888',
+    textAlign: "center",
+    color: "#888",
   },
   taskItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
     padding: 12,
     borderRadius: 8,
     marginTop: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   taskAvatar: {
-    backgroundColor: '#eef6f7',
+    backgroundColor: "#eef6f7",
     width: 40,
     height: 40,
     borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
   taskEmoji: {
@@ -210,11 +249,20 @@ const styles = StyleSheet.create({
   },
   taskName: {
     fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   taskTime: {
     fontSize: 12,
-    color: '#888',
+    color: "#888",
+  },
+  fullDeleteBackground: {
+    flex: 1,
+    backgroundColor: "red",
+    justifyContent: "center",
+    alignItems: "flex-end",
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginTop: 8,
   },
 });

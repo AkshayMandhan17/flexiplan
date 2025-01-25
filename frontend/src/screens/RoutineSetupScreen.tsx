@@ -4,14 +4,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const RoutineSetupScreen = ({ navigation }: any) => {
     const [messages, setMessages] = useState([
-        { id: '1', sender: 'assistant', text: 'Welcome to Flexiplan! Let’s set up your routine. What tasks do you usually work on during the day?' },
+        { id: '1', sender: 'assistant', text: 'Welcome to Flexiplan! Let’s set up your routine. What time do you usually wake up on a day?' },
     ]);
     const [input, setInput] = useState('');
-    const [currentQuestionId, setCurrentQuestionId] = useState(1); // Track current question
-    const [userId, setUserId] = useState(1); // Assume you already have the user ID after login (can be retrieved from AsyncStorage or context)
-    const [token, setToken] = useState<string | null>(null); // Store the token
+    const [currentQuestionId, setCurrentQuestionId] = useState(1);
+    const [userId, setUserId] = useState(4); 
+    const [token, setToken] = useState<string | null>(null); 
 
-    // Fetch the token from AsyncStorage on component mount
     useEffect(() => {
         const fetchToken = async () => {
             const storedToken = await AsyncStorage.getItem('access_token');
@@ -20,25 +19,24 @@ const RoutineSetupScreen = ({ navigation }: any) => {
         fetchToken();
     }, []);
 
+    
     const handleSendMessage = async () => {
         if (input.trim()) {
             const newMessage = { id: Date.now().toString(), sender: 'user', text: input };
             setMessages([...messages, newMessage]);
             setInput('');
 
-            // Ensure the token is available before making the request
             if (!token) {
                 Alert.alert('Error', 'No token found, please log in again');
                 return;
             }
 
-            // Send the response to the backend and get the assistant's reply
             try {
-                const response = await fetch('http://192.168.100.21:8000/api/routine-setup/', {
+                const response = await fetch('http://172.16.82.225:8000/api/routine-setup/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`, // Add token to headers
+                        'Authorization': `Bearer ${token}`,
                     },
                     body: JSON.stringify({
                         user_id: userId,
@@ -50,19 +48,15 @@ const RoutineSetupScreen = ({ navigation }: any) => {
                 const data = await response.json();
 
                 if (data.clarification) {
-                    // If clarification is needed, send the clarification message
                     const assistantMessage = { id: Date.now().toString(), sender: 'assistant', text: data.clarification };
                     setMessages((prev) => [...prev, assistantMessage]);
                 } else if (data.next_question) {
-                    // If a valid response is received, move to the next question
                     const assistantMessage = { id: Date.now().toString(), sender: 'assistant', text: data.next_question.question };
                     setMessages((prev) => [...prev, assistantMessage]);
-                    setCurrentQuestionId(data.next_question.id); // Update to the next question
+                    setCurrentQuestionId(data.next_question.id); 
                 } else {
-                    // Routine setup complete or other message
                     const assistantMessage = { id: Date.now().toString(), sender: 'assistant', text: data.message || "Routine setup complete!" };
                     setMessages((prev) => [...prev, assistantMessage]);
-                    // Optionally navigate to the home screen after setup is complete
                     navigation.replace("TabNavigator");
                 }
             } catch (error) {

@@ -5,7 +5,6 @@ type AuthContextType = {
   setIsLoggedIn: (value: boolean) => void;
 };
 
-// Create context with a default value of 'undefined'
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {

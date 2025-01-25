@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from django.contrib.auth.models import User  # Assuming you're using the default User model
+from core.models import User 
 
 # Serializer for the User model
 from rest_framework import serializers
@@ -9,7 +9,7 @@ from rest_framework import serializers
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name']  # Include necessary fields
+        fields = ['id', 'username', 'email']  # Include necessary fields
 
 class UsersView(APIView):
     def get(self, request):

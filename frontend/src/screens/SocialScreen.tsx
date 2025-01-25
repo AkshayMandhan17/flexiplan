@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,72 +8,103 @@ import {
   Image,
   StyleSheet,
 } from 'react-native';
+import { fetchUsers } from '../utils/api'; // Import the updated API call
+import { User } from '../utils/model'; // Import the User interface
 
 const SocialTab = ({ navigation }: any) => {
-  const [friends, setFriends] = useState([
-    { id: '1', name: 'Ece Akman', lastMessage: 'Facebook', added: false },
-    { id: '2', name: 'Gracelyn', lastMessage: '4 mutual friends', added: true },
-    { id: '3', name: 'Daisy Morgan', lastMessage: '8 mutual friends', added: false },
-    { id: '4', name: 'Marie Jensen', lastMessage: 'Facebook', added: false },
-    { id: '5', name: 'Cain Kemp', lastMessage: '54 mutual friends', added: false },
-  ]);
+  const [users, setUsers] = useState<User[]>([]); // State for storing users data
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]); // State for filtered users based on search
+  const [searchTerm, setSearchTerm] = useState(''); // Search term for filtering users
 
-  const toggleAdd = (id: string) => {
-    setFriends((prev) =>
-      prev.map((friend) =>
-        friend.id === id ? { ...friend, added: !friend.added } : friend
-      )
+  // Fetch users from the backend API
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const data = await fetchUsers(); // Call the API to fetch users
+        setUsers(data); // Set the users data
+        setFilteredUsers(data); // Set the filtered list as well
+      } catch (error) {
+        console.error("Failed to load users:", error);
+      }
+    };
+
+    loadUsers();
+  }, []);
+
+  // Handle search input change
+  const handleSearch = (text: string) => {
+    setSearchTerm(text);
+
+    // Filter users based on search term
+    const filtered = users.filter((user) =>
+      user.username.toLowerCase().includes(text.toLowerCase())
     );
+    setFilteredUsers(filtered);
   };
+
+  // // Toggle Add friend status (for now, this is just a mock)
+  // const toggleAdd = (id: string) => {
+  //   setFilteredUsers((prev) =>
+  //     prev.map((user) =>
+  //       user.id === id ? { ...user, added: !user.added } : user
+  //     )
+  //   );
+  // };
 
   return (
     <View style={styles.container}>
       {/* Top Section */}
       <View style={styles.topSection}>
         <Text style={styles.heading}>Find Friends</Text>
-        <TextInput style={styles.searchBar} placeholder="Search friends..." />
+        <TextInput
+          style={styles.searchBar}
+          placeholder="Search friends..."
+          value={searchTerm}
+          onChangeText={handleSearch} // Filter users on text change
+        />
       </View>
 
-      {/* Friends List */}
+      {/* Users List */}
       <FlatList
-        data={friends}
-        keyExtractor={(item) => item.id}
+        data={filteredUsers}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <TouchableOpacity
             onPress={() =>
               navigation.navigate('ChatScreen', {
-                friendName: item.name,
+                friendName: item.username,
                 friendId: item.id,
               })
             }
           >
-          <View style={styles.listItem}>
-            {/* Avatar */}
-            <Image
-              source={{ uri: 'https://via.placeholder.com/50' }} // Placeholder image
-              style={styles.avatar}
-            />
+            <View style={styles.listItem}>
+              {/* Avatar */}
+              <Image
+                source={{ uri: 'https://via.placeholder.com/50' }} // Placeholder image
+                style={styles.avatar}
+              />
 
-            {/* Name and Last Message */}
-            <View style={styles.textContainer}>
-              <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.lastMessage}>{item.lastMessage}</Text>
+              {/* Name and Last Message */}
+              <View style={styles.textContainer}>
+                <Text style={styles.name}>{item.username}</Text>
+                <Text style={styles.lastMessage}>
+                  no messages yet
+                </Text>
+              </View>
+
+              {/* Add Button */}
+              <TouchableOpacity
+                style={[
+                  styles.addButton,
+                  { backgroundColor: '#9dbfb6' },
+                ]}
+              >
+                <Text style={{ color: '#FFF' }}>
+                  {/* {item.added ? 'Added' : 'Add'} */}
+                  Add
+                </Text>
+              </TouchableOpacity>
             </View>
-
-            {/* Add Button */}
-            <TouchableOpacity
-              style={[
-                styles.addButton,
-                { backgroundColor: item.added ? '#e0e0e0' : '#9dbfb6' },
-              ]}
-              onPress={() => toggleAdd(item.id)}
-              disabled={item.added}
-            >
-              <Text style={{ color: item.added ? '#888' : '#fff' }}>
-                {item.added ? 'Added' : 'Add'}
-              </Text>
-            </TouchableOpacity>
-          </View>
           </TouchableOpacity>
         )}
         contentContainerStyle={styles.listContainer}

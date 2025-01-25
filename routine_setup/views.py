@@ -16,26 +16,20 @@ QUESTIONS = [
     {
         "id": 1,
         "question": "When do you typically start your day?",
-        "instruction": "Return the response as JSON: { \"day_start_time\": \"07:00 AM\" }",
+        "instruction": "Return the response as JSON: for example { \"day_start_time\": \"07:00 AM\" }",
         "clarification": "Can you provide the exact time you start your day (e.g., 7 AM)?"
     },
     {
         "id": 2,
         "question": "What tasks do you typically work on over the week?",
-        "instruction": "For each task, return a list of task objects in JSON: [ { \"task_name\": \"Task 1\", \"time_required\": \"2 hours\", \"priority\": \"High\", \"days_associated\": [\"Monday\", \"Wednesday\"] } ]",
+        "instruction": "For tasks, return a list of task objects in JSON: [ { \"task_name\": \"Task 1\", \"time_required\": \"2 hours\", \"priority\": \"High\", \"days_associated\": [\"Monday\", \"Wednesday\"] } ]",
         "clarification": "Please provide the tasks with the time required and priority (e.g., Task 1, 2 hours, High priority)."
     },
     {
         "id": 3,
         "question": "What are your hobbies that you want to make time for?",
-        "instruction": "Return a list of hobbies in JSON: [ { \"hobby_name\": \"Reading\", \"time_required\": \"1 hour\" } ]",
+        "instruction": "Return a list of hobbies in JSON: for example [ { \"hobby_name\": \"Reading\", \"time_required\": \"1 hour\" } ]",
         "clarification": "Please list your hobbies and the time you'd like to dedicate to each."
-    },
-    {
-        "id": 4,
-        "question": "How many hours do you dedicate to each task?",
-        "instruction": "For each task, return the updated time in JSON: [ { \"task_name\": \"Task 1\", \"time_allocated\": \"2 hours\" } ]",
-        "clarification": "Please specify how many hours you want to allocate to each task."
     }
 ]
 
@@ -49,18 +43,20 @@ class RoutineSetupView(APIView):
         user_response = request.data.get("response")
         current_question_id = request.data.get("question_id")
 
-        # Get the current question and its instruction
         current_question = next((q for q in QUESTIONS if q["id"] == current_question_id), None)
         if not current_question:
             return Response({"error": "Invalid question ID."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Construct prompt for Groq Llama API
         prompt = f"""
+        Act as a professional in helping people setup their routine, you are given a question that is being asked from a user and the user's response and also an instruction about what information you have to extract from the user's response and send as JSON.
+        Assume the user is the dumbest person and user response can be vague, but you have to be mindful and try to extract most information without having to send clarification, however if it is really required then you can send the clarification to user. Note that clarification should also be sent in Json format.
+        Also Note that if you are able to send the information required in instruction, you don't send the clarification.
         Question: {current_question['question']}
         User Response: {user_response}
-
+        Identify the information required in the instruction from the user response, you can make assumptions for relevantly obvious things.
         Instruction: {current_question['instruction']}
-        If the user response is not containing what is required, return the clarification for the question so the user can respond better.
+        First of all try to deduce the information required in instruction, If the information required in the instruction can not be deduced from the user response at all, return the clarification for the question so the user can respond better.
         Clarification: {current_question['clarification']}
         
         """
@@ -75,13 +71,18 @@ class RoutineSetupView(APIView):
             print(f"Raw Response from Groq: {response_content}")
 
             # Extract JSON from response using regex
-            json_match = re.search(r"\{.*\}|\[.*\]", response_content, re.DOTALL)
+            json_match = re.search(r"(\{.*\}|\[.*\])", response_content, re.DOTALL)
             if not json_match:
                 return Response({"clarification": current_question["clarification"]}, status=status.HTTP_400_BAD_REQUEST)
-
+            
+            
+            json_string = json_match.group(0)
             # Parse the extracted JSON
-            structured_data = json.loads(json_match.group(0))
-
+            try:
+                structured_data = json.loads(json_string)
+            except json.JSONDecodeError:
+                 return Response({"clarification": current_question["clarification"]}, status=status.HTTP_400_BAD_REQUEST)
+            
             # Handle responses based on the current question ID
             if current_question_id == 1:  # Start of the day
                 if "day_start_time" not in structured_data:
@@ -121,15 +122,6 @@ class RoutineSetupView(APIView):
                             defaults={"category": "General"}
                         )
                         UserHobby.objects.create(user_id=user_id, hobby=hobby)
-                else:
-                    return Response({"clarification": current_question["clarification"]}, status=status.HTTP_400_BAD_REQUEST)
-
-            elif current_question_id == 4:  # Task hours
-                if isinstance(structured_data, list) and all(["task_name" in task for task in structured_data]):
-                    for task_data in structured_data:
-                        Task.objects.filter(user_id=user_id, task_name=task_data["task_name"]).update(
-                            time_required=task_data["time_allocated"]
-                        )
                 else:
                     return Response({"clarification": current_question["clarification"]}, status=status.HTTP_400_BAD_REQUEST)
 

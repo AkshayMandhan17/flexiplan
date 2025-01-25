@@ -1,20 +1,12 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  Image,
-  TouchableOpacity,
-  FlatList,
-  Switch,
-  StyleSheet,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons'; // Make sure to install this library or replace with any icon library you use.
+import React, { useState, useEffect } from 'react';
+import { View, Text, Image, TouchableOpacity, FlatList, Switch, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SettingsScreen = () => {
-  // State for the "Off day" toggle
+  const [username, setUsername] = useState<string>('');
   const [isOffDay, setIsOffDay] = useState(false);
 
-  // Mock settings data
   const settings = [
     { id: '1', title: 'View Hobbies', action: () => console.log('View Hobbies') },
     { id: '2', title: 'View Tasks', action: () => console.log('View Tasks') },
@@ -23,23 +15,36 @@ const SettingsScreen = () => {
     { id: '5', title: 'Change Password', action: () => console.log('Change Password') },
   ];
 
+  useEffect(() => {
+    const fetchUserDetails = async () => {
+      try {
+        const savedUsername = await AsyncStorage.getItem('user_username');
+        if (savedUsername) {
+          setUsername(savedUsername);
+        }
+      } catch (error) {
+        console.error('Failed to fetch username from AsyncStorage:', error);
+      }
+    };
+
+    fetchUserDetails();
+  }, []);
+
   return (
     <View style={styles.container}>
-      {/* Profile Section */}
       <View style={styles.profileSection}>
         <View style={styles.profileImageWrapper}>
           <Image
-            source={{ uri: 'https://via.placeholder.com/100' }} // Replace with actual image URL
+            source={{ uri: 'https://via.placeholder.com/100' }}
             style={styles.profileImage}
           />
           <TouchableOpacity style={styles.editIcon}>
             <Text style={styles.editText}>✏️</Text>
           </TouchableOpacity>
         </View>
-        <Text style={styles.username}>Akshay Mandhan</Text>
+        <Text style={styles.username}>{username || 'Loading...'}</Text>
       </View>
 
-      {/* Settings List */}
       <FlatList
         data={settings}
         keyExtractor={(item) => item.id}
