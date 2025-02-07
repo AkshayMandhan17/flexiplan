@@ -19,7 +19,7 @@ class SignupView(APIView):
 
 
 class LoginView(APIView):
-    permission_classes = []  # Allow unauthenticated access
+   # permission_classes = []  # Allow unauthenticated access
 
     def post(self, request):
         username = request.data.get("username")

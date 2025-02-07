@@ -1,8 +1,17 @@
 import { API_BASE_URL } from "../config";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export const fetchHobbies = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/hobbies/`); // API endpoint for hobbies
+    const accessToken = await AsyncStorage.getItem("access_token");
+    const response = await fetch(`${API_BASE_URL}/api/hobbies/`,{
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      }
+    }
+    ); // API endpoint for hobbies
 
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
@@ -19,10 +28,12 @@ export const fetchHobbies = async () => {
 
 export const fetchUsers = async () => {
     try {
+      const accessToken = await AsyncStorage.getItem("access_token");
       const response = await fetch(`${API_BASE_URL}/api/users/`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
         },
       });
   
