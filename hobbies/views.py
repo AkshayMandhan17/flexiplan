@@ -36,6 +36,25 @@ class UserHobbiesView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    def post(self, request):
+        """Add a hobby to the user's profile."""
+        try:
+            user_id = request.data.get("user_id")
+            hobby_id = request.data.get("hobby_id")
+
+            if not user_id or not hobby_id:
+                return Response({"error": "user_id and hobby_id are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check if hobby already exists for the user
+            if UserHobby.objects.filter(user_id=user_id, hobby_id=hobby_id).exists():
+                return Response({"error": "Hobby already added."}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Create new UserHobby entry
+            UserHobby.objects.create(user_id=user_id, hobby_id=hobby_id)
+            return Response({"message": "Hobby added successfully."}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     def delete(self, request):
         """Delete a specific hobby for a user."""
         try:

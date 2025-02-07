@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, Alert, StyleSheet, Dimensions } from "react-native";
 import { Input, Button, Icon } from "react-native-elements";
-
+import { API_BASE_URL } from "../config";
 // Primary Color and topColor Adjustments
 const primaryColor = "#0096F6"; // Primary Blue
 const topColor = "#9dbfb6"; // Darkened color for the top part (darker for button and link)
@@ -39,7 +39,7 @@ const SignupScreen = ({ navigation }: any) => {
     }
 
     try {
-      const response = await fetch("http://172.16.82.225:8000/api/signup/", {
+      const response = await fetch(`${API_BASE_URL}/api/signup/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
