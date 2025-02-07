@@ -37,3 +37,49 @@ export const fetchUsers = async () => {
       throw error;
     }
   };
+
+  export const login = async (username: string, password: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/login/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password }),
+      });
+  
+      const data = await response.json();
+  
+      if (!response.ok) {
+        throw new Error(data.error || "Invalid credentials!");
+      }
+  
+      return data; // Return login response
+    } catch (error) {
+      console.error("Error during login:", error);
+      throw error;
+    }
+  };
+
+  export const signup = async (username: string, email: string, password: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/signup/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, email, password }),
+      });
+  
+      const data = await response.json();
+  
+      if (!response.ok) {
+        throw new Error(data.error || "Error!");
+      }
+  
+      return data; // Return singup response
+    } catch (error) {
+      console.error("Error during signup:", error);
+      throw error;
+    }
+  };
