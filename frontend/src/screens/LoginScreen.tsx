@@ -3,6 +3,7 @@ import { View, Text, Alert, StyleSheet, Dimensions } from "react-native";
 import { Input, Button, Icon } from "react-native-elements";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "../components/AuthContext";
+import { API_BASE_URL } from "../config";
 
 const primaryColor = "#0096F6"; 
 const topColor = "#9dbfb6";
@@ -37,7 +38,8 @@ const LoginScreen = ({ navigation }: any) => {
     }
 
     try {
-      const response = await fetch("http://172.16.82.225:8000/api/login/", {
+      console.log(API_BASE_URL);
+      const response = await fetch(`${API_BASE_URL}/api/login/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

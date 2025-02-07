@@ -8,6 +8,13 @@ import json
 from core.models import UserSetting, Task, Hobby, UserHobby
 import re 
 
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
+import google.generativeai as genai  # Import the Gemini SDK
+from google.api_core import exceptions
+from django.conf import settings  # Import settings for API key
+
 # Initialize Groq client
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
@@ -139,3 +146,112 @@ class RoutineSetupView(APIView):
         except Exception as e:
             print(f"Unexpected Error: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# Fetch the API KEY from django settings
+GOOGLE_API_KEY = getattr(settings, 'GOOGLE_API_KEY', None)
+
+if GOOGLE_API_KEY is None:
+    raise Exception("Set GOOGLE_API_KEY in your env")
+
+
+genai.configure(api_key=GOOGLE_API_KEY)
+model = genai.GenerativeModel('gemini-pro')
+
+@csrf_exempt # Remove this in production; use proper authentication
+def generate_routine(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid request method'}, status=405)
+    
+    # Static Data for Now
+    user_tasks = [
+    # Fixed Time Tasks
+        {
+            "task_name": "Morning Run",
+            "time_required": "00:45:00",
+            "days": ["Monday", "Wednesday", "Friday"],
+            "is_fixed_time": True,
+            "fixed_time_slot": "06:00:00",
+        },
+        {
+            "task_name": "Work Core Hours",
+            "time_required": "06:00:00",  # Increased work time
+            "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+            "is_fixed_time": True,
+            "fixed_time_slot": "09:00:00",
+        },
+        {
+            "task_name": "Team Meeting",
+            "time_required": "01:30:00",
+            "days": ["Tuesday", "Thursday"],
+            "is_fixed_time": True,
+            "fixed_time_slot": "14:00:00",  # Afternoon meeting
+        },
+        # Flexible Tasks
+        {
+            "task_name": "Errands",
+            "time_required": "01:30:00",
+            "days": ["Saturday", "Sunday"],
+            "is_fixed_time": False,
+        },
+        {
+            "task_name": "Grocery Shopping",
+            "time_required": "01:00:00",
+            "days": ["Saturday"],
+            "is_fixed_time": False,
+        },
+        {
+            "task_name": "Work on Project",
+            "time_required": "02:00:00",
+            "days": ["Monday", "Wednesday"],
+            "is_fixed_time": False,
+        },
+        {
+            "task_name": "Learning",
+            "time_required": "01:30:00",
+            "days": ["Tuesday", "Thursday", "Saturday"],
+            "is_fixed_time": False,
+        },
+        {
+            "task_name": "Relaxation Time",
+            "time_required": "02:00:00",
+            "days": ["Friday", "Sunday"],
+            "is_fixed_time": False
+        }
+    ]
+
+    user_hobbies = [
+        {"name": "Guitar Practice", "category": "Music"}, # Added Time required
+        {"name": "Yoga Session", "category": "Fitness"}, #Added time required
+        {"name": "Reading", "category": "Intellectual"} #Added time required
+    ]
+
+    user_settings = {
+        "day_start_time": "05:30:00",  # Earlier start time
+        "day_end_time": "22:30:00",  # Later end time
+        "off_day_toggle": False, # Keep it at False
+    }
+    
+    # Prepare prompt for Gemini API
+    prompt = f"""
+        Generate a detailed weekly routine, ensuring tasks are scheduled without conflicts, and hobbies are integrated.
+        
+        Tasks: {json.dumps(user_tasks)}
+        Hobbies: {json.dumps(user_hobbies)}
+        Settings: {json.dumps(user_settings)}
+    """
+    
+    # Call Gemini API using the SDK
+    try:
+        response = model.generate_content(prompt)
+        if response.text:
+            generated_routine = response.text
+        else:
+            return JsonResponse({"error":"The model returned no text"}, status=500)
+        
+    except exceptions.GoogleAPIError as e:
+         return JsonResponse({"error": f"Gemini API Error: {str(e)}"}, status=500)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+    
+    return JsonResponse({"routine": generated_routine})
