@@ -2,6 +2,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from core.models import Hobby, UserHobby
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 # Serializer for the Hobby model
 from rest_framework import serializers
@@ -15,6 +17,10 @@ class HobbySerializer(serializers.ModelSerializer):
 
 # General Hobbies API for All Users (Explore Hobbies)
 class ExploreHobbiesView(APIView):
+
+    authentication_classes = [JWTAuthentication]  # Enforce JWT authentication
+    permission_classes = [IsAuthenticated]  # Require authentication
+
     def get(self, request):
         """Get all hobbies available for exploration."""
         try:
@@ -26,6 +32,10 @@ class ExploreHobbiesView(APIView):
 
 # User-specific Hobby APIs
 class UserHobbiesView(APIView):
+
+    authentication_classes = [JWTAuthentication]  # Enforce JWT authentication
+    permission_classes = [IsAuthenticated]  # Require authentication
+
     def get(self, request, user_id):
         """Get all hobbies of a specific user."""
         try:

@@ -4,6 +4,8 @@ import { Input, Button, Icon } from "react-native-elements";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "../components/AuthContext";
 import { API_BASE_URL } from "../config";
+import { login } from "../utils/api";
+
 
 const primaryColor = "#0096F6"; 
 const topColor = "#9dbfb6";
@@ -38,30 +40,14 @@ const LoginScreen = ({ navigation }: any) => {
     }
 
     try {
-      console.log(API_BASE_URL);
-      const response = await fetch(`${API_BASE_URL}/api/login/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username,
-          password,
-        }),
-      });
-      const data = await response.json();
-
-      if (response.ok) {
-        await AsyncStorage.setItem("access_token", data.access);
-        await AsyncStorage.setItem("refresh_token", data.refresh);
-        await AsyncStorage.setItem("user_username", data.user.username);
-        setIsLoggedIn(true);
-        navigation.replace("TabNavigator"); 
-      } else {
-        Alert.alert("Error", data.error || "Invalid credentials!");
-      }
-    } catch (error) {
-      Alert.alert("Error", "Failed to connect to the server.");
+      const data = await login(username, password); // Call the login function from api.ts
+      await AsyncStorage.setItem("access_token", data.access);
+      await AsyncStorage.setItem("refresh_token", data.refresh);
+      await AsyncStorage.setItem("user_username", data.user.username);
+      setIsLoggedIn(true);
+      navigation.replace("TabNavigator");
+    } catch (error: any) {
+      Alert.alert("Error", error.message || "Failed to connect to the server.");
     }
   };
 

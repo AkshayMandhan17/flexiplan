@@ -1,7 +1,9 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from core.models import User 
+from core.models import User
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 # Serializer for the User model
 from rest_framework import serializers
@@ -12,6 +14,10 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email']  # Include necessary fields
 
 class UsersView(APIView):
+
+    authentication_classes = [JWTAuthentication]  # Enforce JWT authentication
+    permission_classes = [IsAuthenticated]  # Require authentication
+
     def get(self, request):
         """Fetch all users registered in the app."""
         try:
