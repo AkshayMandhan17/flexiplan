@@ -42,7 +42,6 @@ const LoginScreen = ({ navigation }: any) => {
     try {
       const data = await login(username, password);
       setIsLoggedIn(true);
-      navigation.replace("TabNavigator");
     } catch (error: any) {
       Alert.alert("Error", error.message || "Failed to connect to the server.");
     }
