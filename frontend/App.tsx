@@ -7,6 +7,7 @@ import TabNavigator from './src/components/TabNavigator';
 import { AuthProvider, useAuth } from './src/components/AuthContext';
 import RoutineSetupScreen from './src/screens/RoutineSetupScreen';
 import ChatScreen from './src/screens/ChatScreen';
+import UserHobbiesScreen from './src/screens/UserHobbiesScreen';
 
 const Stack = createStackNavigator();
 

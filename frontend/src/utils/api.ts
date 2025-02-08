@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "../config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Alert } from 'react-native'; // Import Alert
 
 export const fetchHobbies = async () => {
   try {
@@ -65,6 +66,11 @@ export const fetchUsers = async () => {
         throw new Error(data.error || "Invalid credentials!");
       }
   
+      await AsyncStorage.setItem("access_token", data.access);
+      await AsyncStorage.setItem("refresh_token", data.refresh);
+      await AsyncStorage.setItem("user_id", String(data.user.id));
+      await AsyncStorage.setItem("user_username", data.user.username);
+
       return data; // Return login response
     } catch (error) {
       console.error("Error during login:", error);
@@ -91,6 +97,80 @@ export const fetchUsers = async () => {
       return data; // Return singup response
     } catch (error) {
       console.error("Error during signup:", error);
+      throw error;
+    }
+  };
+
+  export const fetchUserHobbies = async (userId: number) => {
+    try {
+      const accessToken = await AsyncStorage.getItem("access_token");
+      const response = await fetch(`${API_BASE_URL}/api/user/${userId}/hobbies/`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
+  
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+  
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Error fetching user hobbies:", error);
+      throw error;
+    }
+  };
+  
+  export const addUserHobby = async (userId: number, hobbyId: number) => {
+    try {
+      const accessToken = await AsyncStorage.getItem("access_token");
+      const response = await fetch(`${API_BASE_URL}/api/user/${userId}/hobbies/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({ hobby_id: hobbyId })
+      });
+  
+      const data = await response.json();
+  
+      if (!response.ok) {
+        // Use the error message from the API
+        const errorMessage = data.error || 'Unknown error';
+        Alert.alert("Error", errorMessage);
+        return; // Early return
+      }
+  
+      return data;
+    } catch (error: any) {
+      console.error("Error adding user hobby:", error);
+      Alert.alert("Error", error.message || "Failed to add hobby.");
+      throw error;
+    }
+  };
+  
+  export const deleteUserHobby = async (userId: number, hobbyId: number) => {
+    try {
+      const accessToken = await AsyncStorage.getItem("access_token");
+      const response = await fetch(`${API_BASE_URL}/api/user/${userId}/hobbies/delete/${hobbyId}/`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+      });
+  
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+  
+      return;
+    } catch (error) {
+      console.error("Error deleting user hobby:", error);
       throw error;
     }
   };

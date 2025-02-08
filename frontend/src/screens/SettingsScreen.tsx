@@ -2,13 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Image, TouchableOpacity, FlatList, Switch, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { NavigationProp, useNavigation } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack'; // Import createStackNavigator
+import UserHobbiesScreen from './UserHobbiesScreen'; // Import UserHobbiesScreen
 
-const SettingsScreen = () => {
+const SettingsStack = createStackNavigator(); // Create a StackNavigator
+
+
+// the following two types are basically resolving the typescript mismatch for navigation
+type RootStackParamList = {
+  SettingsContent: undefined;
+  UserHobbies: undefined;
+};
+
+type SettingsScreenContentNavigationProp = NavigationProp<RootStackParamList, 'SettingsContent'>;
+
+const SettingsScreenContent = () => {
+  const navigation = useNavigation<SettingsScreenContentNavigationProp>();
   const [username, setUsername] = useState<string>('');
   const [isOffDay, setIsOffDay] = useState(false);
 
   const settings = [
-    { id: '1', title: 'View Hobbies', action: () => console.log('View Hobbies') },
+    { id: '1', title: 'View Hobbies', action: () => navigation.navigate('UserHobbies') }, // Navigate to UserHobbiesScreen
     { id: '2', title: 'View Tasks', action: () => console.log('View Tasks') },
     { id: '3', title: 'View Saved Routines', action: () => console.log('View Saved Routines') },
     { id: '4', title: 'Update Username', action: () => console.log('Update Username') },
@@ -67,6 +82,15 @@ const SettingsScreen = () => {
         )}
       />
     </View>
+  );
+};
+
+const SettingsScreen = () => {
+  return (
+    <SettingsStack.Navigator>
+      <SettingsStack.Screen name="SettingsContent" component={SettingsScreenContent} options={{ headerShown: false }} />
+      <SettingsStack.Screen name="UserHobbies" component={UserHobbiesScreen} options={{ headerShown: false }} />
+    </SettingsStack.Navigator>
   );
 };
 
