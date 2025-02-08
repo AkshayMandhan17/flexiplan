@@ -9,9 +9,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons"; // For the "+" button icon
-import { fetchHobbies } from "../utils/api"; // Import the API function
+import { fetchHobbies, addUserHobby } from "../utils/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Hobby } from "../utils/model";
 const categories = ["Art", "Sports", "Music", "Tech", "Travel", "Cooking"]; // Example categories
 
@@ -29,14 +31,24 @@ const categoryImages: { [key: string]: string } = {
 const ExploreHobbiesScreen = () => {
   const [hobbies, setHobbies] = useState<Hobby[]>();
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<number | null>(null);
 
   useEffect(() => {
     const loadHobbies = async () => {
       try {
         const data = await fetchHobbies();
         setHobbies(data);
+
+        const storedUserId = await AsyncStorage.getItem("user_id");
+        if (storedUserId) {
+          setUserId(parseInt(storedUserId, 10)); // Parse the string to a number
+        } else {
+          // Handle the case where the user ID is not found (e.g., user not logged in)
+          Alert.alert("User ID not found. Please log in.");
+        }
+
       } catch (error) {
-        console.error("Failed to load hobbies:", error);
+        console.error("Failed to load data:", error);
       } finally {
         setLoading(false);
       }
@@ -44,6 +56,27 @@ const ExploreHobbiesScreen = () => {
 
     loadHobbies();
   }, []);
+
+
+  const handleAddHobby = async (hobbyId: number) => {
+    if (!userId) {
+      Alert.alert("You must be logged in to add hobbies.");
+      return;
+    }
+  
+    try {
+      const result = await addUserHobby(userId, hobbyId); // Capture the result
+  
+      if (result) {
+        // Only show the success alert if addUserHobby returned a result
+        Alert.alert("Hobby added successfully!");
+      }
+    } catch (error: any) {
+      console.error("Failed to add hobby:", error);
+      Alert.alert("Failed to add hobby: " + (error.message || error));
+    }
+  };
+
 
   if (loading) {
     return (
@@ -82,7 +115,7 @@ const ExploreHobbiesScreen = () => {
                 source={{ uri: categoryImages[item.category] || categoryImages["Default"] }}
                 style={{ width: "100%", height: "100%", borderRadius: 8 }}
               />
-              <TouchableOpacity style={styles.addButton}>
+              <TouchableOpacity style={styles.addButton} onPress={() => handleAddHobby(item.id)}>
                 <Ionicons name="add" size={20} color="#fff" />
               </TouchableOpacity>
             </View>

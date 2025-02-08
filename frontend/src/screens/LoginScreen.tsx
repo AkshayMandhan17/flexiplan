@@ -40,10 +40,7 @@ const LoginScreen = ({ navigation }: any) => {
     }
 
     try {
-      const data = await login(username, password); // Call the login function from api.ts
-      await AsyncStorage.setItem("access_token", data.access);
-      await AsyncStorage.setItem("refresh_token", data.refresh);
-      await AsyncStorage.setItem("user_username", data.user.username);
+      const data = await login(username, password);
       setIsLoggedIn(true);
       navigation.replace("TabNavigator");
     } catch (error: any) {

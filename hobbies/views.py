@@ -8,7 +8,6 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 # Serializer for the Hobby model
 from rest_framework import serializers
 
-
 class HobbySerializer(serializers.ModelSerializer):
     class Meta:
         model = Hobby
@@ -46,10 +45,9 @@ class UserHobbiesView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    def post(self, request):
+    def post(self, request, user_id):
         """Add a hobby to the user's profile."""
         try:
-            user_id = request.data.get("user_id")
             hobby_id = request.data.get("hobby_id")
 
             if not user_id or not hobby_id:
@@ -65,11 +63,9 @@ class UserHobbiesView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    def delete(self, request):
+    def delete(self, request, user_id, hobby_id):
         """Delete a specific hobby for a user."""
         try:
-            user_id = request.GET.get("user_id")
-            hobby_id = request.GET.get("hobby_id")
             user_hobby = UserHobby.objects.get(user_id=user_id, hobby_id=hobby_id)
             user_hobby.delete()
             return Response({"message": "User's hobby removed successfully."}, status=status.HTTP_200_OK)
