@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, TouchableOpacity, FlatList, Switch, StyleSheet } from 'react-native';
+import { View, Text, Image, TouchableOpacity, FlatList, Switch, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack'; // Import createStackNavigator
 import UserHobbiesScreen from './UserHobbiesScreen'; // Import UserHobbiesScreen
-
+import { useAuth } from '../components/AuthContext';
 const SettingsStack = createStackNavigator(); // Create a StackNavigator
 
 
@@ -13,6 +13,7 @@ const SettingsStack = createStackNavigator(); // Create a StackNavigator
 type RootStackParamList = {
   SettingsContent: undefined;
   UserHobbies: undefined;
+  Login: undefined;
 };
 
 type SettingsScreenContentNavigationProp = NavigationProp<RootStackParamList, 'SettingsContent'>;
@@ -21,6 +22,42 @@ const SettingsScreenContent = () => {
   const navigation = useNavigation<SettingsScreenContentNavigationProp>();
   const [username, setUsername] = useState<string>('');
   const [isOffDay, setIsOffDay] = useState(false);
+  const { setIsLoggedIn } = useAuth();
+
+  const handleLogout = async () => {
+    Alert.alert(
+      "Log Out",
+      "Are you sure you want to log out?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "OK",
+          onPress: async () => {
+            try {
+              // Clear AsyncStorage
+              await AsyncStorage.removeItem('access_token');
+              await AsyncStorage.removeItem('refresh_token');
+              await AsyncStorage.removeItem('user_id');
+              await AsyncStorage.removeItem('user_username'); // Clear username as well
+
+              // Update AuthContext
+              setIsLoggedIn(false);
+
+              // Navigate to Login screen
+              // navigation.navigate('Login'); // Navigate to Login screen (ensure you have a Login screen route)
+            } catch (error) {
+              console.error('Failed to log out:', error);
+              Alert.alert("Error", "Failed to log out. Please try again.");
+            }
+          }
+        }
+      ],
+      { cancelable: false }
+    );
+  };
 
   const settings = [
     { id: '1', title: 'View Hobbies', action: () => navigation.navigate('UserHobbies') }, // Navigate to UserHobbiesScreen
@@ -28,6 +65,7 @@ const SettingsScreenContent = () => {
     { id: '3', title: 'View Saved Routines', action: () => console.log('View Saved Routines') },
     { id: '4', title: 'Update Username', action: () => console.log('Update Username') },
     { id: '5', title: 'Change Password', action: () => console.log('Change Password') },
+    { id: '6', title: 'Logout', action: handleLogout },
   ];
 
   useEffect(() => {
