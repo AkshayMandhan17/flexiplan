@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { View, Text, Alert, StyleSheet, Dimensions } from "react-native";
 import { Input, Button, Icon } from "react-native-elements";
-import { API_BASE_URL } from "../config";
 import { signup } from "../utils/api";
+
 // Primary Color and topColor Adjustments
 const primaryColor = "#0096F6"; // Primary Blue
 const topColor = "#9dbfb6"; // Darkened color for the top part (darker for button and link)
@@ -24,15 +24,35 @@ const SignupScreen = ({ navigation }: any) => {
   }>({});
   const [genericError, setGenericError] = useState("");
 
+  const validateEmail = (email: string) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
+
+  const validatePassword = (password: string) => {
+    const re = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+{}\[\]:;<>,.?~\\/-]).{8,}$/;
+    return re.test(password);
+  };
+
   const handleSignup = async () => {
     // Reset errors
     setErrors({});
+    setGenericError("");
 
     // Validation
     let formErrors: any = {};
     if (!username) formErrors.username = "Username is required";
-    if (!email) formErrors.email = "Email is required";
-    if (!password) formErrors.password = "Password is required";
+    if (!email) {
+      formErrors.email = "Email is required";
+    } else if (!validateEmail(email)) {
+      formErrors.email = "Invalid email address";
+    }
+    if (!password) {
+      formErrors.password = "Password is required";
+    } else if (!validatePassword(password)) {
+      formErrors.password =
+        "Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character.";
+    }
 
     if (Object.keys(formErrors).length > 0) {
       setErrors(formErrors);
@@ -41,11 +61,10 @@ const SignupScreen = ({ navigation }: any) => {
 
     try {
       const response = await signup(username, email, password);
-
-      if (response.ok) {
+      if (response) {
         navigation.navigate("Login");
       }
-      } catch (error) {
+    } catch (error) {
       Alert.alert("Error", "Failed to connect to the server.");
     }
   };
@@ -56,10 +75,8 @@ const SignupScreen = ({ navigation }: any) => {
         <Text style={styles.topText}>Sign Up</Text>
       </View>
 
-   
       <View style={styles.overlay}>
         <View style={styles.formContainer}>
-          
           <Input
             placeholder="Username"
             value={username}
@@ -73,7 +90,7 @@ const SignupScreen = ({ navigation }: any) => {
                 color="#666"
                 size={scaleSize(24)}
               />
-            } 
+            }
             leftIconContainerStyle={styles.iconContainer}
           />
 
@@ -109,11 +126,10 @@ const SignupScreen = ({ navigation }: any) => {
                 color="#666"
                 size={scaleSize(26)}
               />
-            } 
+            }
             leftIconContainerStyle={styles.iconContainer}
           />
 
-          
           {genericError ? (
             <Text style={styles.genericError}>{genericError}</Text>
           ) : null}
@@ -145,7 +161,7 @@ const styles = StyleSheet.create({
     backgroundColor: topColor,
   },
   topSection: {
-    height: "30%", 
+    height: "30%",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -177,22 +193,22 @@ const styles = StyleSheet.create({
     marginRight: scaleSize(10),
   },
   signupButton: {
-    backgroundColor: topColor, 
+    backgroundColor: topColor,
     borderRadius: scaleSize(5),
     width: scaleSize(300),
   },
   loginContainer: {
     flexDirection: "row",
     marginTop: scaleSize(15),
-    alignItems: "center", 
+    alignItems: "center",
   },
   loginLink: {
-    color: topColor, 
+    color: topColor,
     fontWeight: "bold",
     fontSize: scaleSize(16),
   },
   genericError: {
-    color: "red", 
+    color: "red",
     marginBottom: scaleSize(20),
     fontSize: scaleSize(15),
   },
