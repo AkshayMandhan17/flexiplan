@@ -110,3 +110,19 @@ class Notification(models.Model):
     content = models.TextField()
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+
+class Friendship(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="friendships")
+    friend = models.ForeignKey(User, on_delete=models.CASCADE, related_name="friends")
+    status = models.CharField(
+        max_length=10,
+        choices=[("Pending", "Pending"), ("Accepted", "Accepted"), ("Rejected", "Rejected")],
+        default="Pending"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # class Meta:
+    #     unique_together = ("from_user", "to_user")  # Prevent duplicate friend requests
+
+    # def __str__(self):
+    #     return f"{self.from_user} -> {self.to_user} ({self.status})"

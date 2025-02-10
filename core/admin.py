@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, Hobby, UserHobby, Routine, UserRoutine, Task, Message, UserSetting, UserStatus, RoutineFeedback, Notification
+from .models import User, Hobby, UserHobby, Routine, UserRoutine, Task, Message, UserSetting, UserStatus, RoutineFeedback, Notification, Friendship
 
 # Register models here
 admin.site.register(User)
@@ -13,3 +13,4 @@ admin.site.register(UserSetting)
 admin.site.register(UserStatus)
 admin.site.register(RoutineFeedback)
 admin.site.register(Notification)
+admin.site.register(Friendship)

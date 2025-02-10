@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User
+from .models import User, Friendship
 
 
 class SignupSerializer(serializers.ModelSerializer):
@@ -22,3 +22,13 @@ class SignupSerializer(serializers.ModelSerializer):
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email']  # Include necessary fields
+
+class FriendshipSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Friendship
+        fields = ['id', 'user', 'friend', 'status', 'created_at']
