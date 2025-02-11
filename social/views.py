@@ -59,8 +59,8 @@ class RespondToFriendRequestView(APIView):
             friendship.save()
             return Response({"message": "Friend request accepted."}, status=status.HTTP_200_OK)
         elif action == "Reject":
-            friendship.status = "Rejected"
-            friendship.save()
+            # Delete the Friendship object if the request is rejected
+            friendship.delete()
             return Response({"message": "Friend request rejected."}, status=status.HTTP_200_OK)
         else:
             return Response({"error": "Invalid action."}, status=status.HTTP_400_BAD_REQUEST)
