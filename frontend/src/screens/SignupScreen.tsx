@@ -1,7 +1,12 @@
 import React, { useState } from "react";
-import { View, Text, Alert, StyleSheet, Dimensions } from "react-native";
+import { View, Text, Alert, StyleSheet, Dimensions, TextInput } from "react-native";
 import { Input, Button, Icon } from "react-native-elements";
 import { signup } from "../utils/api";
+import { KeyboardAvoidingView } from "react-native";
+import { StatusBar } from "react-native";
+import { useWindowDimensions, Image } from "react-native";
+import Animated, { FadeInUp, FadeInDown } from "react-native-reanimated";
+import { TouchableOpacity } from "react-native";
 
 // Primary Color and topColor Adjustments
 const primaryColor = "#0096F6"; // Primary Blue
@@ -14,6 +19,7 @@ const scale = width / 375; // Assuming the base screen size is 375 (like iPhone 
 const scaleSize = (size: number) => Math.round(size * scale);
 
 const SignupScreen = ({ navigation }: any) => {
+  const { width, height } = useWindowDimensions();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -70,94 +76,200 @@ const SignupScreen = ({ navigation }: any) => {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.topSection, { backgroundColor: topColor }]}>
-        <Text style={styles.topText}>Sign Up</Text>
-      </View>
+    <KeyboardAvoidingView behavior='padding' style={{ flex: 1, backgroundColor: "white" }}>
+      <StatusBar barStyle={"light-content"} />
+      <Image
+        style={{ position: "absolute", width, height }}
+        source={require("../../assets/back1.jpg")}
+        resizeMode="cover"
+        blurRadius={3}
+      />
+      <View
+        style={{
+          position: "absolute",
+          width,
+          height,
+          backgroundColor: "rgba(0,0,0,0.3)",
+          zIndex: 1,
+        }}
+      >
+        <View style={{ justifyContent: "center", paddingHorizontal: 20, marginTop:height/15 }}>
+          <Animated.Image
+            entering={FadeInUp.delay(200).duration(1000).springify().damping(3)}
+            style={{
+              width: width * 0.6,
+              height: height * 0.15,
+              alignSelf: "center",
+              marginBottom: 30,
+            }}
+            source={require("../../assets/app-icon.png")}
+            resizeMode="contain"
+          />
+          <Animated.Text
+            entering={FadeInUp.duration(1000).springify()}
+            style={{
+              fontSize: 32,
+              fontWeight: "bold",
+              color: "#fff",
+              textAlign: "center",
+              marginBottom: 20,
+              letterSpacing: 1,
+            }}
+          >
+            Sign Up
+          </Animated.Text>
+        </View>
 
-      <View style={styles.overlay}>
-        <View style={styles.formContainer}>
-          <Input
-            placeholder="Username"
-            value={username}
-            onChangeText={setUsername}
-            errorMessage={errors.username}
-            containerStyle={styles.inputContainer}
-            leftIcon={
-              <Icon
-                name="user"
-                type="font-awesome"
-                color="#666"
-                size={scaleSize(24)}
+        <View style={styles.overlay}>
+          <View style={styles.formContainer}>
+            <Animated.View
+              entering={FadeInDown.duration(1000).springify()}
+              style={{
+                marginBottom: 15,
+                backgroundColor: 'rgba(255,255,255,0.1)',
+                borderRadius: 15,
+                padding: 15,
+                flexDirection: 'row',
+                alignItems: 'center',
+                borderWidth: 1,
+                borderColor: 'rgba(255, 255, 255, 0.3)',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.8,
+                shadowRadius: 3,
+              }}
+            >
+              <View
+                style={{
+                  alignItems: 'center',  
+                  justifyContent: 'center', 
+                  alignSelf: 'center',
+                  width: 50,  
+                  height: 50, 
+                  marginLeft:-15,
+                }}
+              >
+                <Icon name="user" type="font-awesome" color="white" size={24} />
+              </View>
+
+              <TextInput
+                placeholder="Username"
+                placeholderTextColor="white"
+                value={username}
+                onChangeText={setUsername}
+                autoCapitalize="none"
+                style={{ color: 'white', fontSize: 18, flex: 1 }}
               />
-            }
-            leftIconContainerStyle={styles.iconContainer}
-          />
-
-          <Input
-            placeholder="Email Address"
-            keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
-            errorMessage={errors.email}
-            containerStyle={styles.inputContainer}
-            leftIcon={
-              <Icon
-                name="envelope"
-                type="font-awesome"
-                color="#666"
-                size={scaleSize(20)}
+            </Animated.View>
+            <Animated.View
+              entering={FadeInDown.duration(1000).springify()}
+              style={{
+                marginBottom: 15,
+                backgroundColor: 'rgba(255,255,255,0.1)',
+                borderRadius: 15,
+                padding: 15,
+                flexDirection: 'row',
+                alignItems: 'center',
+                borderWidth: 1,
+                borderColor: 'rgba(255, 255, 255, 0.3)',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.8,
+                shadowRadius: 3,
+              }}
+            >
+              <View
+                style={{
+                  alignItems: 'center',  
+                  justifyContent: 'center', 
+                  alignSelf: 'center',
+                  width: 50,  
+                  height: 50, 
+                  marginLeft:-15,
+                }}
+              >
+                <Icon name="envelope" type="font-awesome" color="white" size={20} />
+              </View>
+              <TextInput
+                placeholder="Email Address"
+                placeholderTextColor={"white"}
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                style={{ color: 'white', fontSize: 18, flex: 1 }}
               />
-            }
-            leftIconContainerStyle={styles.iconContainer}
-          />
-
-          <Input
-            placeholder="Password"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-            errorMessage={errors.password}
-            containerStyle={styles.inputContainer}
-            leftIcon={
-              <Icon
-                name="lock"
-                type="font-awesome"
-                color="#666"
-                size={scaleSize(26)}
+            </Animated.View>
+            <Animated.View
+              entering={FadeInDown.duration(1000).springify()}
+              style={{
+                marginBottom: 15,
+                backgroundColor: 'rgba(255,255,255,0.1)',
+                borderRadius: 15,
+                padding: 15,
+                flexDirection: 'row',
+                alignItems: 'center',
+                borderWidth: 1,
+                borderColor: 'rgba(255, 255, 255, 0.3)',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.8,
+                shadowRadius: 3,
+              }}
+            >
+              <View
+                style={{
+                  alignItems: 'center',  
+                  justifyContent: 'center', 
+                  alignSelf: 'center',
+                  width: 50,  
+                  height: 50, 
+                  marginLeft:-15,
+                }}
+              >
+                <Icon name="lock" type="font-awesome" color="white" size={26} />
+              </View>
+              <TextInput
+                placeholder="Password"
+                placeholderTextColor={"white"}
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+                autoCapitalize="none"
+                style={{ color: 'white', fontSize: 18, flex: 1 }}
               />
-            }
-            leftIconContainerStyle={styles.iconContainer}
-          />
+            </Animated.View>
 
-          {genericError ? (
-            <Text style={styles.genericError}>{genericError}</Text>
-          ) : null}
+            {genericError ? (
+              <Text style={styles.genericError}>{genericError}</Text>
+            ) : null}
 
-          <Button
-            title="Sign Up"
-            buttonStyle={styles.signupButton}
-            onPress={handleSignup}
-          />
-
-          <View style={styles.loginContainer}>
-            <Text>Already have an account? </Text>
-            <Button
-              title="Login"
-              type="clear"
-              titleStyle={styles.loginLink}
-              onPress={() => navigation.navigate("Login")}
-            />
+            <Animated.View
+              entering={FadeInDown.delay(600).duration(1000).springify()}
+            >
+              <TouchableOpacity onPress={handleSignup} style={styles.button}>
+                <Text style={styles.buttonText}>Sign Up</Text>
+              </TouchableOpacity>
+            </Animated.View>
+            
+            <Animated.View
+              entering={FadeInDown.delay(800).duration(1000).springify()}
+              style={{ marginTop: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', alignSelf: 'center', }}
+            >
+              <Text style={{ color: 'white', fontSize:16, fontWeight: 'bold' }}>Already have an account? </Text>
+              <TouchableOpacity onPress={() => navigation.navigate("Login")}>
+                <Text style={styles.loginLink}>Login</Text>
+              </TouchableOpacity>
+            </Animated.View>
           </View>
         </View>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    // flex: 1,
     backgroundColor: topColor,
   },
   topSection: {
@@ -172,7 +284,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     padding: scaleSize(20),
@@ -190,7 +302,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   iconContainer: {
-    marginRight: scaleSize(10),
+    marginRight: scaleSize(20),
   },
   signupButton: {
     backgroundColor: topColor,
@@ -203,7 +315,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   loginLink: {
-    color: topColor,
+    color: 'rgb(255, 144, 70)',
     fontWeight: "bold",
     fontSize: scaleSize(16),
   },
@@ -211,6 +323,18 @@ const styles = StyleSheet.create({
     color: "red",
     marginBottom: scaleSize(20),
     fontSize: scaleSize(15),
+  },
+  button: {
+    backgroundColor: "rgba(197, 110, 50, 0.9)",
+    padding: 15,
+    paddingHorizontal:60,
+    borderRadius: 10,
+  },
+  buttonText: {
+    color: "white",
+    fontSize: 18,
+    fontWeight: "bold",
+    textAlign: 'center',
   },
 });
 
