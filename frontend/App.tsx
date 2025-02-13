@@ -10,47 +10,48 @@ import ChatScreen from './src/screens/ChatScreen';
 import UserHobbiesScreen from './src/screens/UserHobbiesScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, Text } from 'react-native';
+import { IntroductionAnimationScreen } from './src/introduction_animation';
 
 const Stack = createStackNavigator();
 
 const AppNavigator = () => {
   const { isLoggedIn, setIsLoggedIn } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [showIntro, setShowIntro] = useState(false);
   
   useEffect(() => {
+    const checkIntroductionScreen = async () => {
+      try {
+        const hasSeenIntro = await AsyncStorage.getItem('hasSeenIntro');
+        if (!hasSeenIntro) {
+          setShowIntro(true);
+        }
+      } catch (error) {
+        console.error('Error checking introduction screen:', error);
+      }
+    };
+
     const loadAuthToken = async () => {
       try {
         const accessToken = await AsyncStorage.getItem('access_token');
         if (accessToken) {
-          // **Ideal: Verify token validity with backend**
-          // (You'll need to implement a "verify token" API endpoint)
-          // const isValid = await verifyToken(accessToken); // Example
-
-          // if (isValid) {
-            setIsLoggedIn(true); // Set isLoggedIn to true if token is valid
-          // } else {
-          //   // Token is invalid or expired: Refresh it or redirect to login
-          //   // (See next steps)
-          //   setIsLoggedIn(false);
-          //   await AsyncStorage.removeItem('access_token'); // Remove invalid token
-          //   await AsyncStorage.removeItem('refresh_token'); // Remove refresh token (optional)
-          // }
+            setIsLoggedIn(true); 
         } else {
-          setIsLoggedIn(false); // Set isLoggedIn to false if no token found
+          setIsLoggedIn(false); 
         }
       } catch (error) {
         console.error('Error loading auth token:', error);
-        setIsLoggedIn(false); // Set isLoggedIn to false on error
+        setIsLoggedIn(false);
       } finally {
-        setLoading(false); // Set loading to false after token check
+        setLoading(false);
       }
     };
 
+    checkIntroductionScreen();
     loadAuthToken();
-  }, [setIsLoggedIn]);
+  }, [setIsLoggedIn, setShowIntro]);
 
   if (loading) {
-    // Show a loading indicator while checking the auth token
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <Text>Loading...</Text>
@@ -62,31 +63,36 @@ const AppNavigator = () => {
     <NavigationContainer>
       <Stack.Navigator
         screenOptions={{
-          title: 'FlexiPlan',
-          headerLeft: () => null,
+          headerShown: false,
         }}
       >
-        {isLoggedIn ? (
-          <Stack.Screen name="TabNavigator" component={TabNavigator} />
-        ) : (
-          <>
-            <Stack.Screen name="Signup" component={SignupScreen} />
-            <Stack.Screen name="Login" component={LoginScreen} />
-          </>
-        )}
+        {/* {showIntro ? (
+          <Stack.Screen
+            name="onBoarding"
+            component={IntroductionAnimationScreen}
+            options={{ headerShown: false }}
+            listeners={{
+              focus: async () => {
+                await AsyncStorage.setItem('hasSeenIntro', 'true');
+                setShowIntro(false);
+              },
+            }}
+          />
+        ) :  */}
+          {isLoggedIn ? (
+            <Stack.Screen name="TabNavigator" component={TabNavigator} />
+          ) : (
+            <>
+              <Stack.Screen
+                name="onBoarding"
+                component={IntroductionAnimationScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen name="Signup" component={SignupScreen} />
+              <Stack.Screen name="Login" component={LoginScreen} />
+            </>
+          )}
       </Stack.Navigator>
-        {/* <Stack.Navigator
-          screenOptions={{
-            title: 'FlexiPlan',
-            headerLeft: () => null,
-          }}
-        >
-          <Stack.Screen name="Signup" component={SignupScreen} />
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="TabNavigator" component={TabNavigator} />
-          <Stack.Screen name="RoutineSetup" component={RoutineSetupScreen}/>
-          <Stack.Screen name="ChatScreen" component={ChatScreen}/>
-        </Stack.Navigator> */}
     </NavigationContainer>
   );
 };
