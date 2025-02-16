@@ -104,3 +104,14 @@ class RemoveFriendView(APIView):
 
         friendship.delete()
         return Response({"message": "Friend removed successfully."}, status=status.HTTP_200_OK)
+    
+class ViewFriendshipDetailsView(APIView):
+    authentication_classes = [JWTAuthentication]  # Enforce JWT authentication
+    permission_classes = [IsAuthenticated]  # Require authentication
+
+    def get(self, request):
+        """View friendship details of the logged-in user."""
+        friendships = Friendship.objects.filter(models.Q(user=request.user) | models.Q(friend=request.user))
+        serializer = FriendshipSerializer(friendships, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+

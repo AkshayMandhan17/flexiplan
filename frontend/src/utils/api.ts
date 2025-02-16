@@ -2,6 +2,15 @@ import { API_BASE_URL } from "../config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Alert } from 'react-native'; // Import Alert
 
+// Helper function to get authentication headers
+const getAuthHeaders = async () => {
+  const accessToken = await AsyncStorage.getItem("access_token");
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${accessToken}`,
+  };
+};
+
 export const fetchHobbies = async () => {
   try {
     const accessToken = await AsyncStorage.getItem("access_token");
@@ -174,3 +183,110 @@ export const fetchUsers = async () => {
       throw error;
     }
   };
+
+  // Send a friend request
+export const sendFriendRequest = async (toUserId: number) => {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/api/friends/send/${toUserId}/`, {
+      method: "POST",
+      headers,
+    });
+
+    const data = await response.json();
+    console.log(data);
+    if (!response.ok) {
+      Alert.alert("Error", data.error || "Failed to send friend request.");
+      return;
+    }
+
+    return data;
+  } catch (error: any) {
+    console.error("Error sending friend request:", error);
+    Alert.alert("Error", error.message || "Failed to send friend request.");
+    throw error;
+  }
+};
+
+// Respond to a friend request (Accept or Reject)
+export const respondToFriendRequest = async (requestId: number, action: "Accept" | "Reject") => {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/api/friend-request/${requestId}/respond/`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ action }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      Alert.alert("Error", data.error || "Failed to respond to friend request.");
+      return;
+    }
+
+    return data;
+  } catch (error: any) {
+    console.error("Error responding to friend request:", error);
+    Alert.alert("Error", error.message || "Failed to respond to friend request.");
+    throw error;
+  }
+};
+
+// List all friends of the authenticated user
+export const fetchFriends = async () => {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/api/friends/`, {
+      method: "GET",
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch friends");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching friends:", error);
+    throw error;
+  }
+};
+
+// Remove a friend
+export const removeFriend = async (friendId: number) => {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/api/friend/${friendId}/remove/`, {
+      method: "DELETE",
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to remove friend");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error removing friend:", error);
+    throw error;
+  }
+};
+
+export const fetchFriendshipDetails = async () => {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/api/friends/details/`, {
+      method: "GET",
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch friendship details");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching friendship details:", error);
+    throw error;
+  }
+};
