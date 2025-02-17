@@ -36,14 +36,17 @@ class SendFriendRequestView(APIView):
         if from_user == to_user:
             return Response({"error": "You cannot send a friend request to yourself."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Check if a request already exists
+        # Check if a request already exists in either direction
         if Friendship.objects.filter(user=from_user, friend=to_user).exists():
             return Response({"error": "Friend request already sent."}, status=status.HTTP_400_BAD_REQUEST)
 
+        if Friendship.objects.filter(user=to_user, friend=from_user).exists():
+            return Response({"error": "You have already received a friend request from this user."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Create the friend request
         friendship = Friendship.objects.create(user=from_user, friend=to_user, status="Pending")
         serializer = FriendshipSerializer(friendship)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-
 
 class RespondToFriendRequestView(APIView):
     authentication_classes = [JWTAuthentication]  # Enforce JWT authentication
