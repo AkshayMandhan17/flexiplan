@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-_^=!p_t)#o^!7phui2w%9_@h)=fho*=88bvwm0q@z-$d3c2*#n
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '192.168.0.106', '192.168.100.21', '10.11.71.228', '192.168.1.110', '192.168.0.102']  # Add the IP address of your machine
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '192.168.0.106', '192.168.100.21', '10.11.71.228', '192.168.1.110', '192.168.0.102', '192.168.100.41']  # Add the IP address of your machine
 
 GOOGLE_API_KEY= "AIzaSyBP2VOHu7uFsJ5kNxxWoyalLygStnRagQs"
 
@@ -85,7 +85,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'flexiplan',
         'USER': 'postgres',
-        'PASSWORD': 'postgres',
+        'PASSWORD': 'superuser@flexiplan',
         'HOST': 'localhost',
         'PORT': '5432',
     }

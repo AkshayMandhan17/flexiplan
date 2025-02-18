@@ -6,6 +6,7 @@ import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack'; // Import createStackNavigator
 import UserHobbiesScreen from './UserHobbiesScreen'; // Import UserHobbiesScreen
 import { useAuth } from '../components/AuthContext';
+import UserTasksScreen from './UserTasksScreen';
 const SettingsStack = createStackNavigator(); // Create a StackNavigator
 
 
@@ -13,12 +14,13 @@ const SettingsStack = createStackNavigator(); // Create a StackNavigator
 type RootStackParamList = {
   SettingsContent: undefined;
   UserHobbies: undefined;
+  UserTasks: undefined;
   Login: undefined;
 };
 
 type SettingsScreenContentNavigationProp = NavigationProp<RootStackParamList, 'SettingsContent'>;
 
-const SettingsScreenContent = () => {
+const SettingsScreen = () => {
   const navigation = useNavigation<SettingsScreenContentNavigationProp>();
   const [username, setUsername] = useState<string>('');
   const [isOffDay, setIsOffDay] = useState(false);
@@ -60,8 +62,8 @@ const SettingsScreenContent = () => {
   };
 
   const settings = [
-    { id: '1', title: 'View Hobbies', action: () => navigation.navigate('UserHobbies') }, // Navigate to UserHobbiesScreen
-    { id: '2', title: 'View Tasks', action: () => console.log('View Tasks') },
+    { id: '1', title: 'View Hobbies', action: () => navigation.navigate('UserHobbies') },
+    { id: '2', title: 'View Tasks', action: () => navigation.navigate('UserTasks') },
     { id: '3', title: 'View Saved Routines', action: () => console.log('View Saved Routines') },
     { id: '4', title: 'Update Username', action: () => console.log('Update Username') },
     { id: '5', title: 'Change Password', action: () => console.log('Change Password') },
@@ -120,15 +122,6 @@ const SettingsScreenContent = () => {
         )}
       />
     </View>
-  );
-};
-
-const SettingsScreen = () => {
-  return (
-    <SettingsStack.Navigator>
-      <SettingsStack.Screen name="SettingsContent" component={SettingsScreenContent} options={{ headerShown: false }} />
-      <SettingsStack.Screen name="UserHobbies" component={UserHobbiesScreen} options={{ headerShown: false }} />
-    </SettingsStack.Navigator>
   );
 };
 

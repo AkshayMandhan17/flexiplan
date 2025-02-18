@@ -11,8 +11,30 @@ import UserHobbiesScreen from './src/screens/UserHobbiesScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, Text } from 'react-native';
 import { IntroductionAnimationScreen } from './src/introduction_animation';
+import HomeScreen from './src/screens/HomeScreen';
+import ExploreHobbiesScreen from './src/screens/ExploreScreen';
+import SocialScreen from './src/screens/SocialScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
+import UserTasksScreen from './src/screens/UserTasksScreen';
+import AddTaskScreen from './src/screens/AddTaskScreen';
 
-const Stack = createStackNavigator();
+
+export type RootStackParamList = {
+  TabNavigator: undefined;
+  HomeScreen: undefined;
+  ExploreScreen: undefined;
+  SocialScreen: undefined;
+  SettingsScreen: undefined;
+  UserHobbies: undefined;
+  UserTasks: undefined;
+  AddUserTask: undefined; // ✅ Add AddUserTask screen here
+  onBoarding: undefined;
+  Signup: undefined;
+  Login: undefined;
+};
+
+
+const Stack = createStackNavigator<RootStackParamList>();
 
 const AppNavigator = () => {
   const { isLoggedIn, setIsLoggedIn } = useAuth();
@@ -80,7 +102,16 @@ const AppNavigator = () => {
           />
         ) :  */}
           {isLoggedIn ? (
+            <>
             <Stack.Screen name="TabNavigator" component={TabNavigator} />
+            <Stack.Screen name="HomeScreen" component={HomeScreen} />
+            <Stack.Screen name="ExploreScreen" component={ExploreHobbiesScreen} />
+            <Stack.Screen name="SocialScreen" component={SocialScreen} />
+            <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
+            <Stack.Screen name="UserHobbies" component={UserHobbiesScreen} />
+            <Stack.Screen name="UserTasks" component={UserTasksScreen} />
+            <Stack.Screen name="AddUserTask" component={AddTaskScreen} />
+            </>
           ) : (
             <>
               <Stack.Screen

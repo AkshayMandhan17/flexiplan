@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Friendship
+from .models import Task, User, Friendship
 
 
 class SignupSerializer(serializers.ModelSerializer):
@@ -32,3 +32,10 @@ class FriendshipSerializer(serializers.ModelSerializer):
     class Meta:
         model = Friendship
         fields = ['id', 'user', 'friend', 'status', 'created_at']
+
+
+# Serializer for the Task model
+class TaskSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Task
+        fields = '__all__'
