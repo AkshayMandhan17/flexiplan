@@ -18,6 +18,9 @@ export default function TabNavigator() {
         headerShown: false, // Hides the header on each screen
         tabBarActiveTintColor: '#9dbfb6', // Color for the active tab
         tabBarInactiveTintColor: 'gray', // Color for inactive tabs
+        tabBarStyle: {
+          height: 55,
+        },
       }}
     >
       <Tab.Screen

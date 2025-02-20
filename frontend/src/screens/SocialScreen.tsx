@@ -7,105 +7,101 @@ import {
   TouchableOpacity,
   Image,
   StyleSheet,
+  Alert,
 } from 'react-native';
-import { fetchUsers } from '../utils/api'; // Import the updated API call
-import { User } from '../utils/model'; // Import the User interface
+import { fetchUsers, fetchFriendshipDetails, sendFriendRequest } from '../utils/api';
+import { User } from '../utils/model';
 
 const SocialTab = ({ navigation }: any) => {
-  const [users, setUsers] = useState<User[]>([]); // State for storing users data
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]); // State for filtered users based on search
-  const [searchTerm, setSearchTerm] = useState(''); // Search term for filtering users
+  const [users, setUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [friendshipStatuses, setFriendshipStatuses] = useState<{ [key: number]: string }>({});
 
-  // Fetch users from the backend API
   useEffect(() => {
     const loadUsers = async () => {
       try {
-        const data = await fetchUsers(); // Call the API to fetch users
-        setUsers(data); // Set the users data
-        setFilteredUsers(data); // Set the filtered list as well
+        const data = await fetchUsers();
+        setUsers(data);
+        setFilteredUsers(data);
       } catch (error) {
-        console.error("Failed to load users:", error);
+        console.error('Failed to load users:', error);
+      }
+    };
+
+    const loadFriendshipStatuses = async () => {
+      try {
+        const data = await fetchFriendshipDetails();
+        const statusMap: { [key: number]: string } = {};
+
+        data.forEach((request: { friend: number; status: string }) => {
+          statusMap[request.friend] = request.status;
+        });
+
+        setFriendshipStatuses(statusMap);
+      } catch (error) {
+        console.error('Failed to load friendship statuses:', error);
       }
     };
 
     loadUsers();
+    loadFriendshipStatuses();
   }, []);
 
-  // Handle search input change
   const handleSearch = (text: string) => {
     setSearchTerm(text);
-
-    // Filter users based on search term
     const filtered = users.filter((user) =>
       user.username.toLowerCase().includes(text.toLowerCase())
     );
     setFilteredUsers(filtered);
   };
 
-  // // Toggle Add friend status (for now, this is just a mock)
-  // const toggleAdd = (id: string) => {
-  //   setFilteredUsers((prev) =>
-  //     prev.map((user) =>
-  //       user.id === id ? { ...user, added: !user.added } : user
-  //     )
-  //   );
-  // };
+  const handleSendRequest = async (friendId: number) => {
+    try {
+      await sendFriendRequest(friendId);
+      setFriendshipStatuses((prev) => ({ ...prev, [friendId]: 'Pending' }));
+    } catch (error) {
+      console.error('Failed to send friend request:', error);
+    }
+  };
 
   return (
     <View style={styles.container}>
-      {/* Top Section */}
       <View style={styles.topSection}>
         <Text style={styles.heading}>Find Friends</Text>
         <TextInput
           style={styles.searchBar}
           placeholder="Search friends..."
           value={searchTerm}
-          onChangeText={handleSearch} // Filter users on text change
+          onChangeText={handleSearch}
         />
       </View>
 
-      {/* Users List */}
       <FlatList
         data={filteredUsers}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
-          <TouchableOpacity
-            onPress={() =>
-              navigation.navigate('ChatScreen', {
-                friendName: item.username,
-                friendId: item.id,
-              })
-            }
-          >
-            <View style={styles.listItem}>
-              {/* Avatar */}
-              <Image
-                source={{ uri: 'https://via.placeholder.com/50' }} // Placeholder image
-                style={styles.avatar}
-              />
+          <View style={styles.listItem}>
+            <Image source={{ uri: 'https://via.placeholder.com/50' }} style={styles.avatar} />
 
-              {/* Name and Last Message */}
-              <View style={styles.textContainer}>
-                <Text style={styles.name}>{item.username}</Text>
-                <Text style={styles.lastMessage}>
-                  no messages yet
-                </Text>
-              </View>
-
-              {/* Add Button */}
-              <TouchableOpacity
-                style={[
-                  styles.addButton,
-                  { backgroundColor: '#9dbfb6' },
-                ]}
-              >
-                <Text style={{ color: '#FFF' }}>
-                  {/* {item.added ? 'Added' : 'Add'} */}
-                  Add
-                </Text>
-              </TouchableOpacity>
+            <View style={styles.textContainer}>
+              <Text style={styles.name}>{item.username}</Text>
+              <Text style={styles.lastMessage}>no messages yet</Text>
             </View>
-          </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.addButton,
+                { backgroundColor: friendshipStatuses[item.id] === 'Pending' ? '#ccc' : '#9dbfb6' },
+              ]}
+              onPress={() => handleSendRequest(item.id)}
+              disabled={friendshipStatuses[item.id] === 'Pending'}
+            >
+              <Text style={{ color: '#FFF' }}>
+                {friendshipStatuses[item.id] === 'Pending' ? 'Pending' : 'Add'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         )}
         contentContainerStyle={styles.listContainer}
       />
@@ -120,7 +116,7 @@ const styles = StyleSheet.create({
   },
   topSection: {
     height: '30%',
-    backgroundColor: '#333', // Darker background
+    backgroundColor: '#333',
     justifyContent: 'center',
     paddingHorizontal: 16,
   },

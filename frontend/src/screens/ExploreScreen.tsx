@@ -16,10 +16,10 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Hobby } from "../utils/model";
 
 // Mapping categories to their respective Lottie animation files
-const categoryAnimations = {
+const categoryAnimations: Record<string, any> = {
   Art: require("../../lotties/Sports.json"),
   Sports: require("../../lotties/Sports.json"),
-  Music: require("../../lotties/Sports.json"),
+  Music: require("../../lotties/Music.json"),
   Tech: require("../../lotties/Sports.json"),
   Travel: require("../../lotties/Sports.json"),
   Cooking: require("../../lotties/Sports.json"),
@@ -47,7 +47,7 @@ const ExploreHobbiesScreen = () => {
 
         // Group hobbies by category
         const grouped: { [key: string]: Hobby[] } = {};
-        data.forEach((hobby) => {
+        data.forEach((hobby:any) => {
           if (!grouped[hobby.category]) {
             grouped[hobby.category] = [];
           }
