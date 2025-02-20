@@ -66,7 +66,7 @@ export const fetchUsers = async () => {
       if (!response.ok) {
         throw new Error(data.error || "Invalid credentials!");
       }
-  
+      // console.log(data);
       await AsyncStorage.setItem("access_token", data.access);
       await AsyncStorage.setItem("refresh_token", data.refresh);
       await AsyncStorage.setItem("user_id", String(data.user.id));

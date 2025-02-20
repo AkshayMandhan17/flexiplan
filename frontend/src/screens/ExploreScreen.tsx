@@ -5,33 +5,32 @@ import {
   TextInput,
   ScrollView,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
   ActivityIndicator,
-  Image,
   Alert,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons"; // For the "+" button icon
+import { Ionicons } from "@expo/vector-icons";
+import LottieView from "lottie-react-native";
 import { fetchHobbies, addUserHobby } from "../utils/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Hobby } from "../utils/model";
-const categories = ["Art", "Sports", "Music", "Tech", "Travel", "Cooking"]; // Example categories
 
-// Category-to-image mapping
-const categoryImages: { [key: string]: string } = {
-  Art: "https://via.placeholder.com/100x100?text=Art",
-  Sports: "https://via.placeholder.com/100x100?text=Sports",
-  Music: "https://via.placeholder.com/100x100?text=Music",
-  Tech: "https://via.placeholder.com/100x100?text=Tech",
-  Travel: "https://via.placeholder.com/100x100?text=Travel",
-  Cooking: "https://via.placeholder.com/100x100?text=Cooking",
-  Default: "https://via.placeholder.com/100x100?text=Hobby", // Default image
+// Mapping categories to their respective Lottie animation files
+const categoryAnimations = {
+  Art: require("../../lotties/Sports.json"),
+  Sports: require("../../lotties/Sports.json"),
+  Music: require("../../lotties/Sports.json"),
+  Tech: require("../../lotties/Sports.json"),
+  Travel: require("../../lotties/Sports.json"),
+  Cooking: require("../../lotties/Sports.json"),
+  Default: require("../../lotties/Sports.json"), // Fallback animation
 };
 
 const ExploreHobbiesScreen = () => {
-  const [hobbies, setHobbies] = useState<Hobby[]>();
+  const [hobbies, setHobbies] = useState<Hobby[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<number | null>(null);
+  const [groupedHobbies, setGroupedHobbies] = useState<{ [key: string]: Hobby[] }>({});
 
   useEffect(() => {
     const loadHobbies = async () => {
@@ -41,12 +40,20 @@ const ExploreHobbiesScreen = () => {
 
         const storedUserId = await AsyncStorage.getItem("user_id");
         if (storedUserId) {
-          setUserId(parseInt(storedUserId, 10)); // Parse the string to a number
+          setUserId(parseInt(storedUserId, 10));
         } else {
-          // Handle the case where the user ID is not found (e.g., user not logged in)
           Alert.alert("User ID not found. Please log in.");
         }
 
+        // Group hobbies by category
+        const grouped: { [key: string]: Hobby[] } = {};
+        data.forEach((hobby) => {
+          if (!grouped[hobby.category]) {
+            grouped[hobby.category] = [];
+          }
+          grouped[hobby.category].push(hobby);
+        });
+        setGroupedHobbies(grouped);
       } catch (error) {
         console.error("Failed to load data:", error);
       } finally {
@@ -57,18 +64,14 @@ const ExploreHobbiesScreen = () => {
     loadHobbies();
   }, []);
 
-
   const handleAddHobby = async (hobbyId: number) => {
     if (!userId) {
       Alert.alert("You must be logged in to add hobbies.");
       return;
     }
-  
     try {
-      const result = await addUserHobby(userId, hobbyId); // Capture the result
-  
+      const result = await addUserHobby(userId, hobbyId);
       if (result) {
-        // Only show the success alert if addUserHobby returned a result
         Alert.alert("Hobby added successfully!");
       }
     } catch (error: any) {
@@ -76,7 +79,6 @@ const ExploreHobbiesScreen = () => {
       Alert.alert("Failed to add hobby: " + (error.message || error));
     }
   };
-
 
   if (loading) {
     return (
@@ -88,48 +90,31 @@ const ExploreHobbiesScreen = () => {
   }
 
   return (
-    <View style={styles.container}>
-      {/* Top Section */}
+    <ScrollView style={styles.container}>
       <View style={styles.searchSection}>
         <TextInput style={styles.searchBar} placeholder="Search hobbies..." />
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryTabs}>
-          {categories.map((category, index) => (
-            <TouchableOpacity key={index} style={styles.categoryTab}>
-              <Text style={styles.categoryText}>{category}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
       </View>
 
-      {/* Main Section */}
-      <FlatList
-        data={hobbies}
-        numColumns={2}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            {/* Placeholder for the image */}
-            <View style={styles.cardImagePlaceholder}>
-              {/* Use the Image component to display a placeholder image */}
-              <Image
-                source={{ uri: categoryImages[item.category] || categoryImages["Default"] }}
-                style={{ width: "100%", height: "100%", borderRadius: 8 }}
-              />
+      {Object.keys(groupedHobbies).map((category) => (
+        <View key={category} style={styles.categoryContainer}>
+          <LottieView
+            source={categoryAnimations[category] || categoryAnimations.Default}
+            autoPlay
+            loop
+            style={styles.categoryAnimation}
+          />
+          <Text style={styles.categoryTitle}>{category}</Text>
+          {groupedHobbies[category].map((item) => (
+            <View key={item.id} style={styles.hobbyItem}>
+              <Text style={styles.hobbyText}>{item.name}</Text>
               <TouchableOpacity style={styles.addButton} onPress={() => handleAddHobby(item.id)}>
                 <Ionicons name="add" size={20} color="#fff" />
               </TouchableOpacity>
             </View>
-
-            {/* Card Text Section */}
-            <View style={styles.cardTextContainer}>
-              <Text style={styles.cardTitle}>{item.name}</Text>
-              <Text style={styles.cardCategory}>{item.category}</Text>
-            </View>
-          </View>
-        )}
-        contentContainerStyle={styles.cardsContainer}
-      />
-    </View>
+          ))}
+        </View>
+      ))}
+    </ScrollView>
   );
 };
 
@@ -139,82 +124,53 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   searchSection: {
-    height: "20%",
+    padding: 16,
     backgroundColor: "#f5f5f5",
-    paddingHorizontal: 16,
-    justifyContent: "center",
   },
   searchBar: {
     height: 40,
     backgroundColor: "#fff",
     borderRadius: 20,
     paddingHorizontal: 16,
-    marginTop: 20,
-    marginBottom: 10,
     borderWidth: 1,
     borderColor: "#ccc",
   },
-  categoryTabs: {
-    flexDirection: "row",
-    marginTop: 8,
-    marginBottom: 35,
-  },
-  categoryTab: {
-    backgroundColor: "#e0e0e0",
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    marginRight: 8,
-  },
-  categoryText: {
-    color: "#333",
-    fontSize: 14,
-  },
-  cardsContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-  },
-  card: {
-    flex: 1,
-    margin: 8,
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    overflow: "hidden",
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  cardImagePlaceholder: {
-    height: 100,
-    backgroundColor: "#e0e0e0",
-    justifyContent: "center",
+  categoryContainer: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderColor: "#ddd",
     alignItems: "center",
-    overflow: "hidden",
+  },
+  categoryAnimation: {
+    width: 200,
+    height: 150,
+    marginBottom: 8,
+  },
+  categoryTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 10,
+  },
+  hobbyItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: "orange",
+    borderRadius: 8,
+    marginBottom: 6,
+    width: "100%",
+  },
+  hobbyText: {
+    fontSize: 16,
+    color: "#333",
   },
   addButton: {
-    position: "absolute",
-    bottom: 5,
-    right: 5,
     backgroundColor: "#9dbfb6",
     borderRadius: 20,
     padding: 6,
-  },
-  cardTextContainer: {
-    padding: 8,
-    alignItems: "center",
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    textAlign: "center",
-  },
-  cardCategory: {
-    fontSize: 12,
-    color: "#666",
-    textAlign: "center",
-    marginTop: 4,
   },
   loadingContainer: {
     flex: 1,

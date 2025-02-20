@@ -2,11 +2,8 @@ import React, { useState } from "react";
 import { View, Text, Alert, StyleSheet, Dimensions, TextInput } from "react-native";
 import { Input, Button, Icon } from "react-native-elements";
 import { signup } from "../utils/api";
-import { KeyboardAvoidingView } from "react-native";
-import { StatusBar } from "react-native";
-import { useWindowDimensions, Image } from "react-native";
+import { KeyboardAvoidingView, useWindowDimensions, Image, TouchableOpacity, ScrollView, StatusBar } from "react-native";
 import Animated, { FadeInUp, FadeInDown } from "react-native-reanimated";
-import { TouchableOpacity } from "react-native";
 
 // Primary Color and topColor Adjustments
 const primaryColor = "#0096F6"; // Primary Blue
@@ -76,7 +73,8 @@ const SignupScreen = ({ navigation }: any) => {
   };
 
   return (
-    <KeyboardAvoidingView behavior='padding' style={{ flex: 1, backgroundColor: "white" }}>
+    <KeyboardAvoidingView behavior='position' style={{ backgroundColor: "white" }}>
+      <ScrollView>
       <StatusBar barStyle={"light-content"} />
       <Image
         style={{ position: "absolute", width, height }}
@@ -86,7 +84,7 @@ const SignupScreen = ({ navigation }: any) => {
       />
       <View
         style={{
-          position: "absolute",
+          // position: "absolute",
           width,
           height,
           backgroundColor: "rgba(0,0,0,0.3)",
@@ -263,6 +261,7 @@ const SignupScreen = ({ navigation }: any) => {
           </View>
         </View>
       </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 };
