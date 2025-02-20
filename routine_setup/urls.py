@@ -1,8 +1,6 @@
-# from django.urls import path
-# from .views import RoutineSetupView
-# from . import views
+from django.urls import path
+from .views import GenerateRoutineView
 
-# urlpatterns = [
-#     path('routine-setup/', RoutineSetupView.as_view(), name='routine-setup'),
-#     path('generate-routine/', views.generate_routine, name='generate_routine'),
-# ]
+urlpatterns = [
+    path('generate-routine/<int:user_id>/', GenerateRoutineView.as_view(), name='generate-routine'),
+]
