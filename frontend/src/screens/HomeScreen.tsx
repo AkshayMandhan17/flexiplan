@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  StatusBar,
 } from "react-native";
 import { ProgressBar } from "react-native-paper"; // Progress bars
 import { Checkbox } from "react-native-paper"; // Checkbox
@@ -71,6 +72,7 @@ const HomeScreen = () => {
 
   return (
     <ScrollView style={styles.container}>
+      <StatusBar barStyle={"light-content"} />
       {/* Routines Section */}
       <View style={styles.section}>
         <View style={styles.header}>

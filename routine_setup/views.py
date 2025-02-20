@@ -1,257 +1,171 @@
-# from rest_framework.views import APIView
-# from rest_framework.response import Response
-# from rest_framework import status
-# from rest_framework.permissions import IsAuthenticated
-# from groq import Groq
-# import os
-# import json
-# from core.models import UserSetting, Task, Hobby, UserHobby
-# import re 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import AllowAny  # ✅ Keep AllowAny for testing
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+import json
+import google.generativeai as genai
+from google.api_core import exceptions
+from django.conf import settings
+from core.models import Task, UserHobby, Hobby, UserSetting
+from django.contrib.auth import get_user_model
+import re  # ✅ Import the regular expression module
 
-# from django.http import JsonResponse
-# from django.views.decorators.csrf import csrf_exempt
-# import json
-# import google.generativeai as genai  # Import the Gemini SDK
-# from google.api_core import exceptions
-# from django.conf import settings  # Import settings for API key
+User = get_user_model()
 
-# # Initialize Groq client
-# client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+# Fetch the API KEY from django settings
+GOOGLE_API_KEY = getattr(settings, 'GOOGLE_API_KEY', None)
 
-# # Predefined questions with instructions
-# QUESTIONS = [
-#     {
-#         "id": 1,
-#         "question": "When do you typically start your day?",
-#         "instruction": "Return the response as JSON: for example { \"day_start_time\": \"07:00 AM\" }",
-#         "clarification": "Can you provide the exact time you start your day (e.g., 7 AM)?"
-#     },
-#     {
-#         "id": 2,
-#         "question": "What tasks do you typically work on over the week?",
-#         "instruction": "For tasks, return a list of task objects in JSON: [ { \"task_name\": \"Task 1\", \"time_required\": \"2 hours\", \"priority\": \"High\", \"days_associated\": [\"Monday\", \"Wednesday\"] } ]",
-#         "clarification": "Please provide the tasks with the time required and priority (e.g., Task 1, 2 hours, High priority)."
-#     },
-#     {
-#         "id": 3,
-#         "question": "What are your hobbies that you want to make time for?",
-#         "instruction": "Return a list of hobbies in JSON: for example [ { \"hobby_name\": \"Reading\", \"time_required\": \"1 hour\" } ]",
-#         "clarification": "Please list your hobbies and the time you'd like to dedicate to each."
-#     }
-# ]
+if GOOGLE_API_KEY is None:
+    raise Exception("Set GOOGLE_API_KEY in your env")
 
-# from datetime import datetime
+genai.configure(api_key=GOOGLE_API_KEY)
+model = genai.GenerativeModel('gemini-pro')
 
-# class RoutineSetupView(APIView):
-#     # permission_classes = [IsAuthenticated]
+# Days of the week for validation and parsing
+daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
-#     def post(self, request):
-#         user_id = request.data.get("user_id")
-#         user_response = request.data.get("response")
-#         current_question_id = request.data.get("question_id")
 
-#         current_question = next((q for q in QUESTIONS if q["id"] == current_question_id), None)
-#         if not current_question:
-#             return Response({"error": "Invalid question ID."}, status=status.HTTP_400_BAD_REQUEST)
+def parse_routine_text(routine_text):
+    routine_data = {}
+    day_sections = re.split(r"\*\*([A-Za-z]+)\*\*\n", routine_text)[1:]  # Split by day headers
 
-#         # Construct prompt for Groq Llama API
-#         prompt = f"""
-#         Act as a professional in helping people setup their routine, you are given a question that is being asked from a user and the user's response and also an instruction about what information you have to extract from the user's response and send as JSON.
-#         Assume the user is the dumbest person and user response can be vague, but you have to be mindful and try to extract most information without having to send clarification, however if it is really required then you can send the clarification to user. Note that clarification should also be sent in Json format.
-#         Also Note that if you are able to send the information required in instruction, you don't send the clarification.
-#         Question: {current_question['question']}
-#         User Response: {user_response}
-#         Identify the information required in the instruction from the user response, you can make assumptions for relevantly obvious things.
-#         Instruction: {current_question['instruction']}
-#         First of all try to deduce the information required in instruction, If the information required in the instruction can not be deduced from the user response at all, return the clarification for the question so the user can respond better.
-#         Clarification: {current_question['clarification']}
+    for i in range(0, len(day_sections), 2):
+        day_name = day_sections[i]
+        activities_text = day_sections[i + 1].strip()
+        activities_list = []
+
+        if activities_text:  # Check if there are activities for the day
+            activity_lines = activities_text.strip().split('\n* ')  # Split into lines
+            for line in activity_lines:
+                match = re.match(r"(\d{2}:\d{2}) - (\d{2}:\d{2}):\s*(.*?)\s*\((.*?)\)", line)
+                if match:
+                    start_time, end_time, activity_name, activity_type = match.groups()
+                    activities_list.append({
+                        "activity": activity_name.strip(),
+                        "start_time": start_time.strip(),
+                        "end_time": end_time.strip(),
+                        "type": activity_type.strip().lower()
+                    })
+        routine_data[day_name] = activities_list
+
+    return routine_data
+
+
+@method_decorator(csrf_exempt, name='dispatch')  # Keep csrf_exempt for testing locally
+class GenerateRoutineView(APIView):
+    permission_classes = [AllowAny]  # ✅ Use AllowAny for testing
+
+    def post(self, request, user_id, *args, **kwargs):  # ✅ Take user_id as path parameter
+
+        try:
+            user = User.objects.get(pk=user_id)  # ✅ Fetch user based on user_id from URL
+        except User.DoesNotExist:
+            return Response({"error": f"User with ID {user_id} not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Fetch User Data Dynamically - Modified timedelta formatting
+        user_tasks_queryset = Task.objects.filter(user=user).values(
+            'task_name', 'description', 'time_required', 'days_associated',
+            'is_fixed_time', 'fixed_time_slot', 'priority'
+        )
+        user_tasks = []
+        for task_dict in user_tasks_queryset:
+            task_data = dict(task_dict)  # Convert ValuesQuerySet dictionary to regular dictionary
+            time_required_timedelta = task_data.get('time_required')
+            if time_required_timedelta:
+                # Format timedelta to HH:MM:SS string using str() - Compatible with older Django
+                task_data['time_required'] = str(time_required_timedelta)  # ✅ Use str() for timedelta formatting
+            fixed_time_slot_delta = task_data.get('fixed_time_slot')
+            if fixed_time_slot_delta:
+                task_data['fixed_time_slot'] = str(fixed_time_slot_delta)
+            user_tasks.append(task_data)
+
+        user_hobbies_queryset = UserHobby.objects.filter(user=user).select_related('hobby')
+        user_hobbies = [{"name": user_hobby.hobby.name, "category": user_hobby.hobby.category} for user_hobby in
+                         user_hobbies_queryset]
+
+        # user_settings_queryset = UserSetting.objects.filter(user=user).values('day_start_time', 'day_end_time', 'off_day_toggle').first()
+        # user_settings = user_settings_queryset if user_settings_queryset else {}
+        user_settings = {
+            "day_start_time": "07:00:00",  # Earlier start time
+            "day_end_time": "21:00:00",  # Later end time
+        }
         
-#         """
+        prompt = f"""
+            Generate a detailed and strictly structured weekly routine in a human-readable TEXT format, based ONLY on the following user-provided tasks and hobbies. Do NOT add any activities that are not explicitly listed in the provided tasks and hobbies.
 
-#         try:
-#             # Call Groq API to get the LLM response
-#             chat_completion = client.chat.completions.create(
-#                 messages=[{"role": "user", "content": prompt}],
-#                 model="llama3-8b-8192",
-#             )
-#             response_content = chat_completion.choices[0].message.content
-#             print(f"Raw Response from Groq: {response_content}")
+            **Understanding User Data:**
 
-#             # Extract JSON from response using regex
-#             json_match = re.search(r"(\{.*\}|\[.*\])", response_content, re.DOTALL)
-#             if not json_match:
-#                 return Response({"clarification": current_question["clarification"]}, status=status.HTTP_400_BAD_REQUEST)
-            
-            
-#             json_string = json_match.group(0)
-#             # Parse the extracted JSON
-#             try:
-#                 structured_data = json.loads(json_string)
-#             except json.JSONDecodeError:
-#                  return Response({"clarification": current_question["clarification"]}, status=status.HTTP_400_BAD_REQUEST)
-            
-#             # Handle responses based on the current question ID
-#             if current_question_id == 1:  # Start of the day
-#                 if "day_start_time" not in structured_data:
-#                     return Response({"clarification": current_question["clarification"]}, status=status.HTTP_400_BAD_REQUEST)
+            You will be given two categories of data: User Tasks and User Hobbies, and User Settings.
 
-#                 # Validate and convert time to 24-hour format
-#                 try:
-#                     day_start_time = structured_data["day_start_time"]
-#                     converted_time = datetime.strptime(day_start_time, "%I:%M %p").strftime("%H:%M")
-#                 except ValueError:
-#                     return Response({"clarification": "Invalid time format. Please provide time in '7:00 AM' or '07:00 AM' format."}, status=status.HTTP_400_BAD_REQUEST)
+            *   **User Tasks:** This is a list of tasks the user needs to schedule. Each task object will have the following fields:
+                *   `task_name`: (String) The name of the task.
+                *   `description`: (String, Optional) A brief description of the task.
+                *   `time_required`: (String in "HH:MM:SS" format) The *duration* of time needed to complete this task. This is NOT a start or end time, but the total time to allocate for the task.
+                *   `days_associated`: (List of Strings) The days of the week this task should be scheduled (e.g., ["Monday", "Wednesday", "Friday"]).
+                *   `priority`: (String - "High", "Medium", "Low") The priority level of the task.
+                *   `is_fixed_time`: (Boolean) Indicates if the task MUST be scheduled at a specific time.
+                *   `fixed_time_slot`: (String in "HH:MM:SS" format, Optional, only relevant if `is_fixed_time` is true) The specific time of day when this task MUST start.
 
-#                 # Save the converted time
-#                 UserSetting.objects.update_or_create(
-#                     user_id=user_id,
-#                     defaults={"day_start_time": converted_time}
-#                 )
+                **Important for Tasks:**
+                *   For tasks where `is_fixed_time` is `true`, schedule them to start at the exact `fixed_time_slot` and allocate the `time_required` duration from that start time.
+                *   For tasks where `is_fixed_time` is `false` (flexible tasks), integrate them into the schedule on their `days_associated`, ensuring no time conflicts with fixed-time tasks. Prioritize scheduling high-priority flexible tasks first.
+                *   Ensure ALL tasks from the provided list are included in the weekly routine on their specified days.
 
-#             elif current_question_id == 2:  # Tasks
-#                 if isinstance(structured_data, list) and all(["task_name" in task for task in structured_data]):
-#                     for task_data in structured_data:
-#                         Task.objects.create(
-#                             user_id=user_id,
-#                             task_name=task_data["task_name"],
-#                             time_required=task_data["time_required"],
-#                             days_associated=task_data["days_associated"],
-#                             priority=task_data["priority"]
-#                         )
-#                 else:
-#                     return Response({"clarification": current_question["clarification"]}, status=status.HTTP_400_BAD_REQUEST)
+            *   **User Hobbies:** This is a list of hobbies the user wants to include in their routine. Each hobby object will have:
+                *   `name`: (String) The name of the hobby.
+                *   `category`: (String) The category of the hobby (e.g., "Sports", "Music", "Learning").
 
-#             elif current_question_id == 3:  # Hobbies
-#                 if isinstance(structured_data, list) and all(["hobby_name" in hobby for hobby in structured_data]):
-#                     for hobby_data in structured_data:
-#                         hobby, created = Hobby.objects.get_or_create(
-#                             name=hobby_data["hobby_name"],
-#                             defaults={"category": "General"}
-#                         )
-#                         UserHobby.objects.create(user_id=user_id, hobby=hobby)
-#                 else:
-#                     return Response({"clarification": current_question["clarification"]}, status=status.HTTP_400_BAD_REQUEST)
+                **Important for Hobbies:**
+                *   Integrate ALL provided hobbies into the weekly routine across different days to ensure variety.
+                *   Allocate a reasonable time slot for each hobby (you can decide on a default duration if not specified, e.g., 1 hour, but ensure it's clearly scheduled).
+                *   Hobbies should be scheduled in time slots that do not conflict with fixed-time tasks.
 
-#             # Fetch the next question
-#             next_question = next((q for q in QUESTIONS if q["id"] > current_question_id), None)
-#             if next_question:
-#                 return Response({"next_question": next_question}, status=status.HTTP_200_OK)
+            *   **User Settings:** This will include:
+                *   `day_start_time`: (String in "HH:MM:SS" format) The time the user's day starts.
+                *   `day_end_time`: (String in "HH:MM:SS" format) The time the user's day ends.
 
-#             # If no more questions, return completion message
-#             return Response({"message": "Routine setup complete!"}, status=status.HTTP_200_OK)
+                **Important for Settings:**
+                *   The daily routine MUST start no earlier than `day_start_time` and end no later than `day_end_time` for each day.
+                *   Create a structured routine for EVERY day of the week, from Monday to Sunday.
 
-#         except json.JSONDecodeError as e:
-#             print(f"JSON Parsing Error: {str(e)}")
-#             return Response({"error": "Failed to parse the structured response. Please try again."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-#         except Exception as e:
-#             print(f"Unexpected Error: {str(e)}")
-#             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            **Output Format:**
 
+            Return the weekly routine as a human-readable TEXT, with each day clearly marked in **bold markdown** (e.g., **Monday**).  For each day, list the activities as markdown list items (*). Each activity line should follow this format:
 
-# # Fetch the API KEY from django settings
-# GOOGLE_API_KEY = getattr(settings, 'GOOGLE_API_KEY', None)
+            Start Time - End Time: Activity Name (Activity Type) 
+            (e.g., * 07:00 - 08:00: Morning Yoga (Hobby)). 
 
-# if GOOGLE_API_KEY is None:
-#     raise Exception("Set GOOGLE_API_KEY in your env")
+            Do NOT return JSON. Return plain TEXT in the format described above.
 
+            User Tasks: {json.dumps(user_tasks)}
+            User Hobbies: {json.dumps(user_hobbies)}
+            User Settings: {json.dumps(user_settings)}
+        """
 
-# genai.configure(api_key=GOOGLE_API_KEY)
-# model = genai.GenerativeModel('gemini-pro')
+        # Call Gemini API using the SDK
+        try:
+            response = model.generate_content(prompt)
+            if response.text:
+                raw_response_text = response.text  # Capture raw response text
 
-# @csrf_exempt # Remove this in production; use proper authentication
-# def generate_routine(request):
-#     if request.method != 'POST':
-#         return JsonResponse({'error': 'Invalid request method'}, status=405)
-    
-#     # Static Data for Now
-#     user_tasks = [
-#     # Fixed Time Tasks
-#         {
-#             "task_name": "Morning Run",
-#             "time_required": "00:45:00",
-#             "days": ["Monday", "Wednesday", "Friday"],
-#             "is_fixed_time": True,
-#             "fixed_time_slot": "06:00:00",
-#         },
-#         {
-#             "task_name": "Work Core Hours",
-#             "time_required": "06:00:00",  # Increased work time
-#             "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-#             "is_fixed_time": True,
-#             "fixed_time_slot": "09:00:00",
-#         },
-#         {
-#             "task_name": "Team Meeting",
-#             "time_required": "01:30:00",
-#             "days": ["Tuesday", "Thursday"],
-#             "is_fixed_time": True,
-#             "fixed_time_slot": "14:00:00",  # Afternoon meeting
-#         },
-#         # Flexible Tasks
-#         {
-#             "task_name": "Errands",
-#             "time_required": "01:30:00",
-#             "days": ["Saturday", "Sunday"],
-#             "is_fixed_time": False,
-#         },
-#         {
-#             "task_name": "Grocery Shopping",
-#             "time_required": "01:00:00",
-#             "days": ["Saturday"],
-#             "is_fixed_time": False,
-#         },
-#         {
-#             "task_name": "Work on Project",
-#             "time_required": "02:00:00",
-#             "days": ["Monday", "Wednesday"],
-#             "is_fixed_time": False,
-#         },
-#         {
-#             "task_name": "Learning",
-#             "time_required": "01:30:00",
-#             "days": ["Tuesday", "Thursday", "Saturday"],
-#             "is_fixed_time": False,
-#         },
-#         {
-#             "task_name": "Relaxation Time",
-#             "time_required": "02:00:00",
-#             "days": ["Friday", "Sunday"],
-#             "is_fixed_time": False
-#         }
-#     ]
+                # Manual Text-Based Parsing - Call parsing function
+                try:
+                    generated_routine = parse_routine_text(raw_response_text)  # Call manual parsing function
+                except Exception as e:  # Catch any parsing errors
+                    return Response(
+                        {"error": "Failed to parse routine text manually", "raw_response": raw_response_text,
+                         "details": str(e)},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)  # Send raw_response for debugging
 
-#     user_hobbies = [
-#         {"name": "Guitar Practice", "category": "Music"}, # Added Time required
-#         {"name": "Yoga Session", "category": "Fitness"}, #Added time required
-#         {"name": "Reading", "category": "Intellectual"} #Added time required
-#     ]
+            else:
+                return Response({"error": "The model returned no text"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-#     user_settings = {
-#         "day_start_time": "05:30:00",  # Earlier start time
-#         "day_end_time": "22:30:00",  # Later end time
-#         "off_day_toggle": False, # Keep it at False
-#     }
-    
-#     # Prepare prompt for Gemini API
-#     prompt = f"""
-#         Generate a detailed weekly routine, ensuring tasks are scheduled without conflicts, and hobbies are integrated.
-        
-#         Tasks: {json.dumps(user_tasks)}
-#         Hobbies: {json.dumps(user_hobbies)}
-#         Settings: {json.dumps(user_settings)}
-#     """
-    
-#     # Call Gemini API using the SDK
-#     try:
-#         response = model.generate_content(prompt)
-#         if response.text:
-#             generated_routine = response.text
-#         else:
-#             return JsonResponse({"error":"The model returned no text"}, status=500)
-        
-#     except exceptions.GoogleAPIError as e:
-#          return JsonResponse({"error": f"Gemini API Error: {str(e)}"}, status=500)
-#     except Exception as e:
-#         return JsonResponse({"error": str(e)}, status=500)
-    
-#     return JsonResponse({"routine": generated_routine})
+        except exceptions.GoogleAPIError as e:
+            return Response({"error": f"Gemini API Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({"routine": generated_routine}, status=status.HTTP_200_OK)
+
