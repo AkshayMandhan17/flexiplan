@@ -1,7 +1,7 @@
 import { API_BASE_URL } from "../config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Alert } from 'react-native'; // Import Alert
-import { TaskFormData } from "./model";
+import { TaskFormData, UserRoutineResponse } from "./model";
 
 // Helper function to get authentication headers
 const getAuthHeaders = async () => {
@@ -361,6 +361,30 @@ export const fetchFriendshipDetails = async () => {
     return await response.json();
   } catch (error) {
     console.error("Error fetching friendship details:", error);
+    throw error;
+  }
+};
+
+
+export const fetchUserRoutines = async (): Promise<UserRoutineResponse> => {
+  try {
+    const accessToken = await AsyncStorage.getItem("access_token");
+    const response = await fetch(`${API_BASE_URL}/api/user-routine/`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const data: UserRoutineResponse = await response.json() as UserRoutineResponse;
+    return data;
+  } catch (error) {
+    console.error("Error fetching user routines:", error);
     throw error;
   }
 };

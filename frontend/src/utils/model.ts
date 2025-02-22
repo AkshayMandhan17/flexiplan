@@ -35,3 +35,26 @@ export interface TaskFormData {
   is_fixed_time: boolean;
   fixed_time_slot: string | null;
 }
+
+export interface Activity {
+  id?: string;
+  activity: string;
+  start_time: string;
+  end_time: string;
+  type: string;
+  completed?: boolean;
+}
+
+export interface RoutineData {
+  Monday?: Activity[];
+  Tuesday?: Activity[];
+  Wednesday?: Activity[];
+  Thursday?: Activity[];
+  Friday?: Activity[];
+  Saturday?: Activity[];
+  Sunday?: Activity[];
+}
+
+export interface UserRoutineResponse {
+  routine_data: RoutineData;
+}
