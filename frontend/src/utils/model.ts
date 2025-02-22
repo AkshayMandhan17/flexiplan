@@ -37,22 +37,14 @@ export interface TaskFormData {
 }
 
 export interface Activity {
-  id?: string;
-  activity: string;
-  start_time: string;
-  end_time: string;
   type: string;
-  completed?: boolean;
+  activity: string;
+  end_time: string;
+  start_time: string;
 }
 
 export interface RoutineData {
-  Monday?: Activity[];
-  Tuesday?: Activity[];
-  Wednesday?: Activity[];
-  Thursday?: Activity[];
-  Friday?: Activity[];
-  Saturday?: Activity[];
-  Sunday?: Activity[];
+  [day: string]: Activity[];
 }
 
 export interface UserRoutineResponse {

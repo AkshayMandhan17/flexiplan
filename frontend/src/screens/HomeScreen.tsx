@@ -7,62 +7,126 @@ import {
   TouchableOpacity,
   ScrollView,
   StatusBar,
-  ActivityIndicator, // Import ActivityIndicator for loading state
-  Alert, // Import Alert for error handling
+  Animated
 } from "react-native";
-import { ProgressBar } from "react-native-paper"; // Progress bars - REMOVING FOR NOW
-import { Checkbox } from "react-native-paper"; // Checkbox
-import { Swipeable } from "react-native-gesture-handler"; // Swipeable for swipe actions
-import { Ionicons } from "@expo/vector-icons"; // For delete icon
-import { Activity, RoutineData, UserRoutineResponse } from "../utils/model";
+import { ProgressBar } from "react-native-paper";
+import { Checkbox } from "react-native-paper";
+import { Swipeable } from "react-native-gesture-handler";
+import { Ionicons } from "@expo/vector-icons";
+import Feather from 'react-native-vector-icons/Feather';
+import Icon from 'react-native-vector-icons/Ionicons';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
+import { Dimensions } from "react-native";
+import { RoutineData, UserRoutineResponse } from "../utils/model";
 import { fetchUserRoutines } from "../utils/api";
 
-const HomeScreen = () => {
-  // State for today's tasks fetched from API
-  const [tasks, setTasks] = useState<Activity[]>([]);
-  const [loading, setLoading] = useState(true); // Loading state
-  const [error, setError] = useState<string | null>(null); // Error state
+const windowHeight = Dimensions.get("window").height;
 
-  const today = new Date();
-  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  const currentDayName = dayNames[today.getDay()]; // Get current day name (e.g., "Wednesday")
+const HomeScreen = () => {
+  const tabBarHeight = useBottomTabBarHeight();
+  const [isSidebarVisible, setSidebarVisible] = useState(false);
+  const [sidebarAnimation] = useState(new Animated.Value(-250));
+  const [weeklyRoutineData, setWeeklyRoutineData] = useState<RoutineData | null>(null);
+  const [currentDayIndex, setCurrentDayIndex] = useState<number>(0); // 0 for today, -1 for yesterday, 1 for tomorrow, etc.
+  const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const [tasks, setTasks] = useState<any[]>([]); // Tasks for the current day
+  const [routines, setRoutines] = useState([ // Static routines data
+    { id: "1", name: "This Week", emoji: "☀️", progress: 0.4 },
+    { id: "2", name: "Jatin Routine", emoji: "😎", progress: 0 },
+    { id: "3", name: "Fitness", emoji: "💪", progress: 0.7 },
+  ]);
+  const [activeRoutine, setActiveRoutine] = useState("1");
+
+  const toggleSidebar = () => {
+    if (isSidebarVisible) {
+      Animated.timing(sidebarAnimation, {
+        toValue: -250,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => setSidebarVisible(false));
+    } else {
+      setSidebarVisible(true);
+      Animated.timing(sidebarAnimation, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  };
+
+  const Sidebar = () => (
+    <Animated.View style={[styles.sidebar, { transform: [{ translateX: sidebarAnimation }] }, { height: windowHeight - 55 }]}>
+      <TouchableOpacity style={styles.closeSidebarButton} onPress={toggleSidebar}>
+        <Icon name="menu-outline" size={30} color="white" />
+      </TouchableOpacity>
+      <View style={styles.welcomeContainer}>
+        <Text style={styles.brandName}>Flexiplan</Text>
+      </View>
+      <View style={styles.menuItems}>
+        <TouchableOpacity onPress={toggleSidebar} style={styles.menuItem}>
+          <Icon name="home-outline" size={24} color="white" />
+          <Text style={styles.menuText}>Home</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.menuItem}>
+          <Icon name="person-outline" size={24} color="white" />
+          <Text style={styles.menuText}>Profile</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.menuItem}>
+          <Icon name="settings-outline" size={24} color="white" />
+          <Text style={styles.menuText}>Settings</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.menuItem}>
+          <Icon name="people-outline" size={24} color="white" />
+          <Text style={styles.menuText}>Add Friend</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.menuItem}>
+          <Icon name="log-out-outline" size={24} color="white" />
+          <Text style={styles.menuText}>Logout</Text>
+        </TouchableOpacity>
+      </View>
+    </Animated.View>
+  );
 
   useEffect(() => {
-    const loadTasks = async () => {
-      setLoading(true);
-      setError(null); // Reset error on new load
+    const fetchRoutine = async () => {
       try {
-        const routineData: UserRoutineResponse = await fetchUserRoutines();
-        // Extract today's activities
-        //const todaysActivities: Activity[] = (routineData.routine_data[currentDayName] || []) as Activity[]; // Default to empty array if no activities for today
-        const todaysActivities: Activity[] = (routineData.routine_data[currentDayName as keyof RoutineData] || []) as Activity[];
-        // Format activities to include 'completed' status (initially false) and 'id' if needed for FlatList key
-        const formattedTasks = todaysActivities.map((activity, index) => ({
-          id: String(index), // Or generate a unique ID if needed
-          ...activity,
-          completed: false,
-          timeRange: `${formatTime(activity.start_time)} - ${formatTime(activity.end_time)}`, // Format time range
-        }));
-        setTasks(formattedTasks);
-        setLoading(false);
-      } catch (err: any) {
-        setError(err.message || "Failed to fetch routines.");
-        setLoading(false);
-        Alert.alert("Error Fetching Routines", err.message || "Something went wrong."); // Show error alert
+        const data = await fetchUserRoutines();
+        setWeeklyRoutineData(data.routine_data);
+      } catch (error) {
+        console.error("Failed to fetch routine data", error);
+        // Handle error appropriately (e.g., display error message)
       }
     };
 
-    loadTasks();
+    fetchRoutine();
   }, []);
 
-  // Helper function to format time (assuming time is like "HH:mm:ss" or "HH:mm")
-  const formatTime = (timeString: string): string => {
-    const parts = timeString.split(":");
-    return `${parts[0]}:${parts[1]}`; // Format to "HH:mm"
+  useEffect(() => {
+    if (weeklyRoutineData) {
+      const currentDayName = daysOfWeek[(new Date().getDay() + currentDayIndex + 7) % 7]; // Ensure positive index
+      const dailyTasks = weeklyRoutineData[currentDayName] || [];
+      const formattedTasks = dailyTasks.map((task, index) => ({
+        id: String(index), // Or generate a more unique ID if needed
+        name: task.activity,
+        emoji: getEmojiForType(task.type), // Function to determine emoji based on task type
+        timeRange: `${task.start_time} - ${task.end_time}`,
+        completed: false, // Initially set to false
+      }));
+      setTasks(formattedTasks);
+    }
+  }, [weeklyRoutineData, currentDayIndex]);
+
+  const getEmojiForType = (type: string): string => {
+    switch (type) {
+      case "work": return "💼";
+      case "personal": return "🧘";
+      case "hobby": return "🎨";
+      default: return "🗓️";
+    }
   };
 
-
-  // Toggle task completion (LOCAL STATE ONLY - NO BACKEND UPDATE YET)
   const toggleTask = (id: string) => {
     setTasks((prev) =>
       prev.map((task) =>
@@ -71,75 +135,130 @@ const HomeScreen = () => {
     );
   };
 
-  // Remove a task from the list (LOCAL STATE ONLY - NO BACKEND UPDATE YET)
   const removeTask = (id: string) => {
     setTasks((prev) => prev.filter((task) => task.id !== id));
   };
 
-  // Render the delete action for Swipeable
   const renderRightActions = () => (
     <View style={styles.fullDeleteBackground}>
       <Ionicons name="trash" size={24} color="#fff" />
     </View>
   );
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#76c7c0" />
-      </View>
-    );
-  }
+  const changeDay = (direction: number) => {
+    const todayDayOfWeek = new Date().getDay(); // 0 (Sunday) to 6 (Saturday)
+    const daysFromMonday = (todayDayOfWeek + 6) % 7; // Days from Monday to today (0 for Monday, 6 for Sunday)
+    const daysToSunday = 6 - daysFromMonday; // Days from today to Sunday (0 for Sunday, 6 for Monday)
+    const minDayIndex = -daysFromMonday; // Minimum allowed currentDayIndex (for Monday)
+    const maxDayIndex = daysToSunday; // Maximum allowed currentDayIndex (for Sunday)
+    const newIndex = currentDayIndex + direction;
 
-  if (error) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Error: {error}</Text>
-      </View>
-    );
-  }
+    if (newIndex >= minDayIndex && newIndex <= maxDayIndex) {
+      setCurrentDayIndex(newIndex);
+    }
+  };
+
+  const getCurrentDayText = () => {
+    const today = new Date();
+    const displayDate = new Date();
+    displayDate.setDate(today.getDate() + currentDayIndex);
+    const dayName = daysOfWeek[displayDate.getDay()];
+    const date = displayDate.getDate();
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthName = monthNames[displayDate.getMonth()];
+    return `${monthName} ${date} • ${dayName}`;
+  };
+
+  const getSectionHeading = () => {
+    if (currentDayIndex === 0) return "Today's To Do";
+    const dayDiff = ['days ago', 'day ago', 'Today', 'Tomorrow', 'days later'];
+    const indexForDiff = currentDayIndex + 2;
+    const dayText = dayDiff[indexForDiff] || (currentDayIndex > 0 ? `${currentDayIndex} days later` : `${Math.abs(currentDayIndex)} days ago`);
+    return `${daysOfWeek[(new Date().getDay() + currentDayIndex + 7) % 7]}'s To Do`; // Fallback for other days
+  };
 
 
   return (
-    <ScrollView style={styles.container}>
+    <View style={{flex: 1}}>
       <StatusBar barStyle={"light-content"} />
-
-      {/* Today's To Do Section */}
-      <View style={styles.section}>
+      <TouchableOpacity style={styles.sidebarToggle} onPress={toggleSidebar}>
+        <Icon name="menu-outline" size={30} color="black" />
+      </TouchableOpacity>
+      {isSidebarVisible && <Sidebar />}
+      <View style={{ height: 230, backgroundColor: '#f9f9f9', paddingTop: 20}}>
         <View style={styles.header}>
-          <Text style={styles.heading}>Today's To Do</Text>
-          <Text style={styles.dateText}>
-            {today.toLocaleDateString("en-US", {
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-            })}
-          </Text>
+          <Text style={styles.heading}>Routines</Text>
         </View>
-        {tasks.map((task) => (
-          <Swipeable
-            key={task.id}
-            renderRightActions={renderRightActions}
-            onSwipeableRightOpen={() => removeTask(task.id)}
-          >
-            <View style={styles.taskItem}>
-              {/* <View style={styles.taskAvatar}>  REMOVED EMOJI FOR NOW
-                <Text style={styles.taskEmoji}>{task.emoji}</Text>
-              </View> */}
-              <View style={styles.taskDetails}>
-                <Text style={styles.taskName}>{task.activity}</Text> {/* Use activity name from API */}
-                <Text style={styles.taskTime}>{task.start_time} - {task.end_time}</Text>
+        <FlatList
+          data={routines}
+          horizontal
+          keyExtractor={(item) => item.id}
+          showsHorizontalScrollIndicator={false}
+          renderItem={({ item }) => (
+            <TouchableOpacity activeOpacity={1} onPress={() => setActiveRoutine(item.id)}>
+              <View
+                style={[
+                  styles.routineCard,
+                  activeRoutine === item.id && styles.activeRoutineCard,
+                ]}
+              >
+                <View style={styles.avatar}>
+                  <Text style={styles.emoji}>{item.emoji}</Text>
+                </View>
+                <Text style={styles.routineName}>{item.name}</Text>
+                <ProgressBar
+                  progress={item.progress}
+                  color="#76c7c0"
+                  style={styles.progressBar}
+                />
+                <Text style={styles.progressText}>
+                  {Math.round(item.progress * 100)}% Complete
+                </Text>
               </View>
-              <Checkbox
-                status={task.completed ? "checked" : "unchecked"}
-                // onPress={() => toggleTask(task.id)}
-                color="#76c7c0"
-              />
-            </View>
-          </Swipeable>
-        ))}
+            </TouchableOpacity>
+          )}
+        />
       </View>
-    </ScrollView>
+
+      <ScrollView style={{flex: 1, backgroundColor: '#f9f9f9'}}>
+        <View style={styles.section}>
+          <View style={[styles.header, {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}]}>
+            <TouchableOpacity onPress={() => changeDay(-1)}>
+              <Icon name="chevron-back-outline" size={24} color="#76c7c0" />
+            </TouchableOpacity>
+            <View style={{alignItems: 'center'}}>
+              <Text style={styles.heading}>{getSectionHeading()}</Text>
+              <Text style={styles.dateText}>{getCurrentDayText()}</Text>
+            </View>
+            <TouchableOpacity onPress={() => changeDay(1)}>
+              <Icon name="chevron-forward-outline" size={24} color="#76c7c0" />
+            </TouchableOpacity>
+          </View>
+          {tasks.map((task) => (
+            <Swipeable
+              key={task.id}
+              renderRightActions={renderRightActions}
+              onSwipeableRightOpen={() => removeTask(task.id)}
+            >
+              <View style={styles.taskItem}>
+                <View style={styles.taskAvatar}>
+                  <Text style={styles.taskEmoji}>{task.emoji}</Text>
+                </View>
+                <View style={styles.taskDetails}>
+                  <Text style={styles.taskName}>{task.name}</Text>
+                  <Text style={styles.taskTime}>{task.timeRange}</Text>
+                </View>
+                <Checkbox
+                  status={task.completed ? "checked" : "unchecked"}
+                  onPress={() => toggleTask(task.id)}
+                  color="#76c7c0"
+                />
+              </View>
+            </Swipeable>
+          ))}
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
@@ -149,37 +268,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f9f9f9",
-    paddingHorizontal: 16,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: "red",
-    textAlign: "center",
   },
   section: {
     marginVertical: 16,
+    paddingHorizontal: 16,
   },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
+    height: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   heading: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
+    color: 'black',
+    fontSize: 24,
   },
   seeAll: {
     fontSize: 14,
@@ -189,20 +290,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#333",
   },
-  routineCard: { // REMOVED ROUTINE CARD STYLES
+  routineCard: {
     width: 150,
     backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
-    marginRight: 16,
+    marginRight: 8,
+    marginLeft: 8,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 0,
     elevation: 4,
-    margin: 8,
   },
-  activeRoutineCard: { // REMOVED ROUTINE CARD STYLES
+  activeRoutineCard: {
     shadowColor: "#76c7c0",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
@@ -210,7 +311,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#76c7c0",
   },
-  avatar: { // REMOVED ROUTINE CARD STYLES
+  avatar: {
     backgroundColor: "#eef6f7",
     width: 50,
     height: 50,
@@ -220,22 +321,22 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginBottom: 8,
   },
-  emoji: { // REMOVED ROUTINE CARD STYLES
+  emoji: {
     fontSize: 24,
   },
-  routineName: { // REMOVED ROUTINE CARD STYLES
+  routineName: {
     fontSize: 14,
     fontWeight: "bold",
     textAlign: "center",
     marginBottom: 8,
   },
-  progressBar: { // REMOVED ROUTINE CARD STYLES
+  progressBar: {
     height: 8,
     borderRadius: 4,
     backgroundColor: "#e0e0e0",
     marginBottom: 4,
   },
-  progressText: { // REMOVED ROUTINE CARD STYLES
+  progressText: {
     fontSize: 12,
     textAlign: "center",
     color: "#888",
@@ -248,7 +349,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 8,
   },
-  taskAvatar: { // REMOVED TASK AVATAR STYLES
+  taskAvatar: {
     backgroundColor: "#eef6f7",
     width: 40,
     height: 40,
@@ -257,7 +358,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 12,
   },
-  taskEmoji: { // REMOVED TASK AVATAR STYLES
+  taskEmoji: {
     fontSize: 20,
   },
   taskDetails: {
@@ -280,5 +381,63 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 8,
     marginTop: 8,
+  },
+  welcomeContainer: {
+    marginTop: 50,
+    alignItems: 'center',
+    backgroundColor: '#222',
+    padding: 20,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
+    width: '100%',
+  },
+  closeSidebarButton: {
+    position: 'absolute',
+    right: 10,
+    marginTop: 40,
+  },
+  brandName: {
+    color: '#FFC107',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 10,
+  },
+  welcomeText: {
+    color: 'white',
+    fontSize: 18,
+    marginTop: 10,
+    alignSelf: 'center',
+  },
+  menuItems: {
+    marginTop: 20,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 15,
+  },
+  menuText: {
+    color: 'white',
+    fontSize: 16,
+    marginLeft: 10,
+  },
+  sidebarToggle: {
+    marginLeft: 10,
+    marginTop: 60,
+  },
+  sidebar: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 250,
+    backgroundColor: "rgba(197, 110, 50, 1)",
+    zIndex: 2,
+    paddingHorizontal: 15,
+    paddingVertical: 30,
   },
 });
