@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,35 +9,47 @@ import {
   StatusBar,
   Animated
 } from "react-native";
-import { ProgressBar } from "react-native-paper"; // Progress bars
-import { Checkbox } from "react-native-paper"; // Checkbox
-import { Swipeable } from "react-native-gesture-handler"; // Swipeable for swipe actions
-import { Ionicons } from "@expo/vector-icons"; // For delete icon
+import { ProgressBar } from "react-native-paper";
+import { Checkbox } from "react-native-paper";
+import { Swipeable } from "react-native-gesture-handler";
+import { Ionicons } from "@expo/vector-icons";
 import Feather from 'react-native-vector-icons/Feather';
 import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
 import { Dimensions } from "react-native";
+import { RoutineData, UserRoutineResponse } from "../utils/model";
+import { fetchUserRoutines } from "../utils/api";
 
 const windowHeight = Dimensions.get("window").height;
 
 const HomeScreen = () => {
   const tabBarHeight = useBottomTabBarHeight();
   const [isSidebarVisible, setSidebarVisible] = useState(false);
-  const [sidebarAnimation] = useState(new Animated.Value(-250)); // Initialize at off-screen position
-  
+  const [sidebarAnimation] = useState(new Animated.Value(-250));
+  const [weeklyRoutineData, setWeeklyRoutineData] = useState<RoutineData | null>(null);
+  const [currentDayIndex, setCurrentDayIndex] = useState<number>(0); // 0 for today, -1 for yesterday, 1 for tomorrow, etc.
+  const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const [tasks, setTasks] = useState<any[]>([]); // Tasks for the current day
+  const [routines, setRoutines] = useState([ // Static routines data
+    { id: "1", name: "This Week", emoji: "☀️", progress: 0.4 },
+    { id: "2", name: "Jatin Routine", emoji: "😎", progress: 0 },
+    { id: "3", name: "Fitness", emoji: "💪", progress: 0.7 },
+  ]);
+  const [activeRoutine, setActiveRoutine] = useState("1");
+
   const toggleSidebar = () => {
     if (isSidebarVisible) {
       Animated.timing(sidebarAnimation, {
-        toValue: -250, // Adjust to hide position
+        toValue: -250,
         duration: 300,
         useNativeDriver: true,
       }).start(() => setSidebarVisible(false));
     } else {
       setSidebarVisible(true);
       Animated.timing(sidebarAnimation, {
-        toValue: 0, // Adjust to visible position
+        toValue: 0,
         duration: 300,
         useNativeDriver: true,
       }).start();
@@ -50,12 +62,7 @@ const HomeScreen = () => {
         <Icon name="menu-outline" size={30} color="white" />
       </TouchableOpacity>
       <View style={styles.welcomeContainer}>
-        {/* <Image
-          source={profilePic ? { uri: profilePic } : require('../assests/images/idea.png')}
-          style={styles.logo}
-        /> */}
         <Text style={styles.brandName}>Flexiplan</Text>
-        {/* <Text style={styles.welcomeText}>WELCOME, {username}</Text> */}
       </View>
       <View style={styles.menuItems}>
         <TouchableOpacity onPress={toggleSidebar} style={styles.menuItem}>
@@ -70,26 +77,10 @@ const HomeScreen = () => {
           <Icon name="settings-outline" size={24} color="white" />
           <Text style={styles.menuText}>Settings</Text>
         </TouchableOpacity>
-        {/* <TouchableOpacity style={styles.menuItem}>
-          <MaterialIcons name="local-post-office" size={24} color="white" />
-          <Text style={styles.menuText}>Community</Text>
-        </TouchableOpacity> */}
         <TouchableOpacity style={styles.menuItem}>
           <Icon name="people-outline" size={24} color="white" />
           <Text style={styles.menuText}>Add Friend</Text>
         </TouchableOpacity>
-        {/* <TouchableOpacity style={styles.menuItem}>
-          <Icon name="game-controller-outline" size={20} color="white" />
-          <Text style={styles.menuText}>Play Game</Text>
-        </TouchableOpacity> */}
-        {/* <TouchableOpacity style={styles.menuItem}>
-          <Icon name="analytics-outline" size={24} color="white" />
-          <Text style={styles.menuText}>Progress</Text>
-        </TouchableOpacity> */}
-        {/* <TouchableOpacity style={styles.menuItem}>
-          <Feather name="map-pin" size={24} color="white" />
-          <Text style={styles.menuText}>Google Map</Text>
-        </TouchableOpacity> */}
         <TouchableOpacity style={styles.menuItem}>
           <Icon name="log-out-outline" size={24} color="white" />
           <Text style={styles.menuText}>Logout</Text>
@@ -97,42 +88,45 @@ const HomeScreen = () => {
       </View>
     </Animated.View>
   );
-  // Mock data for routines
-  const [routines, setRoutines] = useState([
-    { id: "1", name: "This Week", emoji: "☀️", progress: 0.4 },
-    { id: "2", name: "Jatin Routine", emoji: "😎", progress: 0 },
-    { id: "3", name: "Fitness", emoji: "💪", progress: 0.7 },
-  ]);
 
-  // State for active routine
-  const [activeRoutine, setActiveRoutine] = useState("1"); // Default active routine is "This Week"
+  useEffect(() => {
+    const fetchRoutine = async () => {
+      try {
+        const data = await fetchUserRoutines();
+        setWeeklyRoutineData(data.routine_data);
+      } catch (error) {
+        console.error("Failed to fetch routine data", error);
+        // Handle error appropriately (e.g., display error message)
+      }
+    };
 
-  // Mock data for today's tasks
-  const [tasks, setTasks] = useState([
-    {
-      id: "1",
-      name: "Drink Water",
-      emoji: "💧",
-      timeRange: "7:00 - 8:00",
-      completed: false,
-    },
-    {
-      id: "2",
-      name: "Walking",
-      emoji: "🚶‍♂️",
-      timeRange: "8:00 - 8:30",
-      completed: false,
-    },
-    {
-      id: "3",
-      name: "Make Coffee",
-      emoji: "☕",
-      timeRange: "8:30 - 9:00",
-      completed: false,
-    },
-  ]);
+    fetchRoutine();
+  }, []);
 
-  // Toggle task completion
+  useEffect(() => {
+    if (weeklyRoutineData) {
+      const currentDayName = daysOfWeek[(new Date().getDay() + currentDayIndex + 7) % 7]; // Ensure positive index
+      const dailyTasks = weeklyRoutineData[currentDayName] || [];
+      const formattedTasks = dailyTasks.map((task, index) => ({
+        id: String(index), // Or generate a more unique ID if needed
+        name: task.activity,
+        emoji: getEmojiForType(task.type), // Function to determine emoji based on task type
+        timeRange: `${task.start_time} - ${task.end_time}`,
+        completed: false, // Initially set to false
+      }));
+      setTasks(formattedTasks);
+    }
+  }, [weeklyRoutineData, currentDayIndex]);
+
+  const getEmojiForType = (type: string): string => {
+    switch (type) {
+      case "work": return "💼";
+      case "personal": return "🧘";
+      case "hobby": return "🎨";
+      default: return "🗓️";
+    }
+  };
+
   const toggleTask = (id: string) => {
     setTasks((prev) =>
       prev.map((task) =>
@@ -141,26 +135,57 @@ const HomeScreen = () => {
     );
   };
 
-  // Remove a task from the list
   const removeTask = (id: string) => {
     setTasks((prev) => prev.filter((task) => task.id !== id));
   };
 
-  // Render the delete action for Swipeable
   const renderRightActions = () => (
     <View style={styles.fullDeleteBackground}>
       <Ionicons name="trash" size={24} color="#fff" />
     </View>
   );
 
+  const changeDay = (direction: number) => {
+    const todayDayOfWeek = new Date().getDay(); // 0 (Sunday) to 6 (Saturday)
+    const daysFromMonday = (todayDayOfWeek + 6) % 7; // Days from Monday to today (0 for Monday, 6 for Sunday)
+    const daysToSunday = 6 - daysFromMonday; // Days from today to Sunday (0 for Sunday, 6 for Monday)
+    const minDayIndex = -daysFromMonday; // Minimum allowed currentDayIndex (for Monday)
+    const maxDayIndex = daysToSunday; // Maximum allowed currentDayIndex (for Sunday)
+    const newIndex = currentDayIndex + direction;
+
+    if (newIndex >= minDayIndex && newIndex <= maxDayIndex) {
+      setCurrentDayIndex(newIndex);
+    }
+  };
+
+  const getCurrentDayText = () => {
+    const today = new Date();
+    const displayDate = new Date();
+    displayDate.setDate(today.getDate() + currentDayIndex);
+    const dayName = daysOfWeek[displayDate.getDay()];
+    const date = displayDate.getDate();
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthName = monthNames[displayDate.getMonth()];
+    return `${monthName} ${date} • ${dayName}`;
+  };
+
+  const getSectionHeading = () => {
+    if (currentDayIndex === 0) return "Today's To Do";
+    const dayDiff = ['days ago', 'day ago', 'Today', 'Tomorrow', 'days later'];
+    const indexForDiff = currentDayIndex + 2;
+    const dayText = dayDiff[indexForDiff] || (currentDayIndex > 0 ? `${currentDayIndex} days later` : `${Math.abs(currentDayIndex)} days ago`);
+    return `${daysOfWeek[(new Date().getDay() + currentDayIndex + 7) % 7]}'s To Do`; // Fallback for other days
+  };
+
+
   return (
-    <ScrollView style={styles.container}>
+    <View style={{flex: 1}}>
       <StatusBar barStyle={"light-content"} />
       <TouchableOpacity style={styles.sidebarToggle} onPress={toggleSidebar}>
         <Icon name="menu-outline" size={30} color="black" />
       </TouchableOpacity>
       {isSidebarVisible && <Sidebar />}
-      {/* <View style={styles.section}> */}
+      <View style={{ height: 230, backgroundColor: '#f9f9f9', paddingTop: 20}}>
         <View style={styles.header}>
           <Text style={styles.heading}>Routines</Text>
         </View>
@@ -193,38 +218,47 @@ const HomeScreen = () => {
             </TouchableOpacity>
           )}
         />
-      {/* </View> */}
-
-      {/* Today's To Do Section */}
-      <View style={styles.section}>
-        <View style={styles.header}>
-          <Text style={styles.heading}>Today's To Do</Text>
-          <Text style={styles.dateText}>Dec 11 • Wednesday</Text>
-        </View>
-        {tasks.map((task) => (
-          <Swipeable
-            key={task.id}
-            renderRightActions={renderRightActions}
-            onSwipeableRightOpen={() => removeTask(task.id)}
-          >
-            <View style={styles.taskItem}>
-              <View style={styles.taskAvatar}>
-                <Text style={styles.taskEmoji}>{task.emoji}</Text>
-              </View>
-              <View style={styles.taskDetails}>
-                <Text style={styles.taskName}>{task.name}</Text>
-                <Text style={styles.taskTime}>{task.timeRange}</Text>
-              </View>
-              <Checkbox
-                status={task.completed ? "checked" : "unchecked"}
-                onPress={() => toggleTask(task.id)}
-                color="#76c7c0"
-              />
-            </View>
-          </Swipeable>
-        ))}
       </View>
-    </ScrollView>
+
+      <ScrollView style={{flex: 1, backgroundColor: '#f9f9f9'}}>
+        <View style={styles.section}>
+          <View style={[styles.header, {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}]}>
+            <TouchableOpacity onPress={() => changeDay(-1)}>
+              <Icon name="chevron-back-outline" size={24} color="#76c7c0" />
+            </TouchableOpacity>
+            <View style={{alignItems: 'center'}}>
+              <Text style={styles.heading}>{getSectionHeading()}</Text>
+              <Text style={styles.dateText}>{getCurrentDayText()}</Text>
+            </View>
+            <TouchableOpacity onPress={() => changeDay(1)}>
+              <Icon name="chevron-forward-outline" size={24} color="#76c7c0" />
+            </TouchableOpacity>
+          </View>
+          {tasks.map((task) => (
+            <Swipeable
+              key={task.id}
+              renderRightActions={renderRightActions}
+              onSwipeableRightOpen={() => removeTask(task.id)}
+            >
+              <View style={styles.taskItem}>
+                <View style={styles.taskAvatar}>
+                  <Text style={styles.taskEmoji}>{task.emoji}</Text>
+                </View>
+                <View style={styles.taskDetails}>
+                  <Text style={styles.taskName}>{task.name}</Text>
+                  <Text style={styles.taskTime}>{task.timeRange}</Text>
+                </View>
+                <Checkbox
+                  status={task.completed ? "checked" : "unchecked"}
+                  onPress={() => toggleTask(task.id)}
+                  color="#76c7c0"
+                />
+              </View>
+            </Swipeable>
+          ))}
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
@@ -234,14 +268,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f9f9f9",
-    // paddingHorizontal: 16,
   },
   section: {
     marginVertical: 16,
+    paddingHorizontal: 16,
   },
   header: {
     height: 60,
-    // backgroundColor: 'white',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -262,13 +295,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
-    marginRight: 16,
+    marginRight: 8,
+    marginLeft: 8,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 0,
     elevation: 4,
-    margin: 8,
   },
   activeRoutineCard: {
     shadowColor: "#76c7c0",
@@ -368,10 +401,10 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   brandName: {
-    color: '#FFC107', 
-    fontSize: 24, 
-    fontWeight: 'bold', 
-    marginTop: 10, 
+    color: '#FFC107',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 10,
   },
   welcomeText: {
     color: 'white',
@@ -406,8 +439,5 @@ const styles = StyleSheet.create({
     zIndex: 2,
     paddingHorizontal: 15,
     paddingVertical: 30,
-    // height: windowHeight, // Use the full screen height
-    // borderBottomRightRadius: 20,
-    // borderTopRightRadius: 20,
   },
 });

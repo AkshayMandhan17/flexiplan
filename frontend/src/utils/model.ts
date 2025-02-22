@@ -35,3 +35,18 @@ export interface TaskFormData {
   is_fixed_time: boolean;
   fixed_time_slot: string | null;
 }
+
+export interface Activity {
+  type: string;
+  activity: string;
+  end_time: string;
+  start_time: string;
+}
+
+export interface RoutineData {
+  [day: string]: Activity[];
+}
+
+export interface UserRoutineResponse {
+  routine_data: RoutineData;
+}

@@ -1,16 +1,16 @@
+from datetime import date, timedelta
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import AllowAny  # ✅ Keep AllowAny for testing
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
 import json
 import google.generativeai as genai
 from google.api_core import exceptions
 from django.conf import settings
-from core.models import Task, UserHobby, Hobby, UserSetting
+from core.models import Routine, Task, UserHobby, Hobby, UserRoutine, UserSetting
 from django.contrib.auth import get_user_model
 import re  # ✅ Import the regular expression module
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 User = get_user_model()
 
@@ -52,10 +52,9 @@ def parse_routine_text(routine_text):
 
     return routine_data
 
-
-@method_decorator(csrf_exempt, name='dispatch')  # Keep csrf_exempt for testing locally
 class GenerateRoutineView(APIView):
-    permission_classes = [AllowAny]  # ✅ Use AllowAny for testing
+    authentication_classes = [JWTAuthentication]  # Enforce JWT authentication
+    permission_classes = [IsAuthenticated]  # Require authentication
 
     def post(self, request, user_id, *args, **kwargs):  # ✅ Take user_id as path parameter
 
@@ -158,7 +157,28 @@ class GenerateRoutineView(APIView):
                         {"error": "Failed to parse routine text manually", "raw_response": raw_response_text,
                          "details": str(e)},
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)  # Send raw_response for debugging
+                
+                try:
+                    today = date.today()
+                    end_date = today + timedelta(days=7)  # Routine for the next 7 days
 
+                    routine = Routine.objects.create(
+                        start_date=today,
+                        end_date=end_date,
+                        routine_data=generated_routine
+                    )
+
+                    UserRoutine.objects.create(
+                        user=user,
+                        routine=routine,
+                        permission='Edit'  # You can set default permission as needed
+                    )
+                    return Response({"routine": generated_routine}, status=status.HTTP_201_CREATED)
+                except Exception as db_error:  # Catch database errors
+                    return Response(
+                        {"error": "Failed to save routine to database", "details": str(db_error)},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR) # ✅ Handle database save errors
+                
             else:
                 return Response({"error": "The model returned no text"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -166,6 +186,4 @@ class GenerateRoutineView(APIView):
             return Response({"error": f"Gemini API Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        return Response({"routine": generated_routine}, status=status.HTTP_200_OK)
 
