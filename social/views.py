@@ -117,3 +117,13 @@ class ViewFriendshipDetailsView(APIView):
         friendships = Friendship.objects.filter(models.Q(user=request.user) | models.Q(friend=request.user))
         serializer = FriendshipSerializer(friendships, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+class ViewFriendRequestsView(APIView):
+    authentication_classes = [JWTAuthentication]  # Enforce JWT authentication
+    permission_classes = [IsAuthenticated]  # Require authentication
+
+    def get(self, request):
+        """List all pending friend requests received by the authenticated user."""
+        friend_requests = Friendship.objects.filter(friend=request.user, status="Pending")
+        serializer = FriendshipSerializer(friend_requests, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
