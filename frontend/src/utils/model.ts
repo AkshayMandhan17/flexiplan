@@ -50,3 +50,12 @@ export interface RoutineData {
 export interface UserRoutineResponse {
   routine_data: RoutineData;
 }
+
+export interface FriendRequest {
+  id: number;
+  user: number;       // ID of the user who initiated some action (may not be the sender)
+  friend: number;     // ID of the other user in the friendship
+  sender_username: string; // Username of the user who sent the request (as clarified)
+  status: "Pending" | "Accepted" | "Rejected";
+  created_at: string;  // ISO 8601 date string (e.g., "2025-02-22T16:15:27.898604Z")
+}

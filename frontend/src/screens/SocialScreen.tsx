@@ -9,14 +9,24 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
-import { fetchUsers, fetchFriendshipDetails, sendFriendRequest } from '../utils/api';
-import { User } from '../utils/model';
+import {
+  fetchUsers,
+  fetchFriendshipDetails,
+  sendFriendRequest,
+  fetchFriendRequests,
+  respondToFriendRequest,
+} from '../utils/api';
+import { User, FriendRequest } from '../utils/model';
+import { useIsFocused } from '@react-navigation/native';
 
 const SocialTab = ({ navigation }: any) => {
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [friendshipStatuses, setFriendshipStatuses] = useState<{ [key: number]: string }>({});
+  const [activeTab, setActiveTab] = useState<'findFriends' | 'requests'>('findFriends');
+  const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
+  const isFocused = useIsFocused();
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -44,9 +54,23 @@ const SocialTab = ({ navigation }: any) => {
       }
     };
 
-    loadUsers();
-    loadFriendshipStatuses();
-  }, []);
+    const loadFriendRequests = async () => {
+      try {
+        const data = await fetchFriendRequests();
+        setFriendRequests(data);
+      } catch (error) {
+        console.error('Failed to load friend requests:', error);
+      }
+    };
+
+    if (isFocused) {
+      loadUsers();
+      loadFriendshipStatuses();
+      if (activeTab === 'requests') {
+        loadFriendRequests();
+      }
+    }
+  }, [isFocused, activeTab]);
 
   const handleSearch = (text: string) => {
     setSearchTerm(text);
@@ -65,8 +89,23 @@ const SocialTab = ({ navigation }: any) => {
     }
   };
 
-  return (
-    <View style={styles.container}>
+  const handleRespondToRequest = async (requestId: number, action: 'Accept' | 'Reject') => {
+    try {
+      await respondToFriendRequest(requestId, action);
+      // Update the friend requests list
+      setFriendRequests((prev) =>
+        prev.map((request) =>
+          request.id === requestId ? { ...request, status: action === 'Accept' ? 'Accepted' : 'Rejected' } : request
+        )
+      );
+    } catch (error) {
+      console.error('Failed to respond to friend request:', error);
+      Alert.alert('Error', 'Failed to respond to friend request.');
+    }
+  };
+
+  const renderFindFriendsTab = () => (
+    <>
       <View style={styles.topSection}>
         <Text style={styles.heading}>Find Friends</Text>
         <TextInput
@@ -105,6 +144,70 @@ const SocialTab = ({ navigation }: any) => {
         )}
         contentContainerStyle={styles.listContainer}
       />
+    </>
+  );
+
+  const renderRequestsTab = () => (
+    <>
+      <View style={styles.topSection}>
+        <Text style={styles.heading}>Friend Requests</Text>
+      </View>
+
+      <FlatList
+        data={friendRequests}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item }) => (
+          <View style={styles.listItem}>
+            <Image source={{ uri: 'https://via.placeholder.com/50' }} style={styles.avatar} />
+
+            <View style={styles.textContainer}>
+              <Text style={styles.name}>{item.sender_username}</Text>
+              <Text style={styles.lastMessage}>{item.status}</Text>
+            </View>
+
+            {item.status === 'Pending' && (
+              <View style={styles.actionsContainer}>
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: '#4CAF50' }]}
+                  onPress={() => handleRespondToRequest(item.id, 'Accept')}
+                >
+                  <Text style={{ color: '#FFF' }}>Accept</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: '#F44336' }]}
+                  onPress={() => handleRespondToRequest(item.id, 'Reject')}
+                >
+                  <Text style={{ color: '#FFF' }}>Reject</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+        contentContainerStyle={styles.listContainer}
+      />
+    </>
+  );
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={activeTab === 'findFriends' ? styles.activeTab : styles.inactiveTab}
+          onPress={() => setActiveTab('findFriends')}
+        >
+          <Text style={styles.tabText}>Find Friends</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={activeTab === 'requests' ? styles.activeTab : styles.inactiveTab}
+          onPress={() => setActiveTab('requests')}
+        >
+          <Text style={styles.tabText}>Requests</Text>
+        </TouchableOpacity>
+      </View>
+
+      {activeTab === 'findFriends' ? renderFindFriendsTab() : renderRequestsTab()}
     </View>
   );
 };
@@ -114,8 +217,28 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#333',
+  },
+  activeTab: {
+    flex: 1,
+    paddingVertical: 12,
+    backgroundColor: '#444',
+    alignItems: 'center',
+  },
+  inactiveTab: {
+    flex: 1,
+    paddingVertical: 12,
+    backgroundColor: '#222',
+    alignItems: 'center',
+  },
+  tabText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
   topSection: {
-    height: '30%',
+    height: '20%',
     backgroundColor: '#333',
     justifyContent: 'center',
     paddingHorizontal: 16,
@@ -167,6 +290,16 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 16,
+  },
+  actionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  actionButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    marginLeft: 8,
   },
 });
 

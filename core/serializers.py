@@ -29,9 +29,11 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email']  # Include necessary fields
 
 class FriendshipSerializer(serializers.ModelSerializer):
+    sender_username = serializers.CharField(source="user.username", read_only=True)
+
     class Meta:
         model = Friendship
-        fields = ['id', 'user', 'friend', 'status', 'created_at']
+        fields = ['id', 'user', 'friend', 'sender_username', 'status', 'created_at']
 
 
 # Serializer for the Task model

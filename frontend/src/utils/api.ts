@@ -2,6 +2,7 @@ import { API_BASE_URL } from "../config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Alert } from 'react-native'; // Import Alert
 import { TaskFormData, UserRoutineResponse } from "./model";
+import { FriendRequest } from "./model";
 
 // Helper function to get authentication headers
 const getAuthHeaders = async () => {
@@ -286,7 +287,7 @@ export const sendFriendRequest = async (toUserId: number) => {
 export const respondToFriendRequest = async (requestId: number, action: "Accept" | "Reject") => {
   try {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/friend-request/${requestId}/respond/`, {
+    const response = await fetch(`${API_BASE_URL}/api/friends/respond/${requestId}/`, {
       method: "POST",
       headers,
       body: JSON.stringify({ action }),
@@ -310,7 +311,7 @@ export const respondToFriendRequest = async (requestId: number, action: "Accept"
 export const fetchFriends = async () => {
   try {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/friends/`, {
+    const response = await fetch(`${API_BASE_URL}/api/friends/list/`, {
       method: "GET",
       headers,
     });
@@ -319,7 +320,13 @@ export const fetchFriends = async () => {
       throw new Error("Failed to fetch friends");
     }
 
-    return await response.json();
+    const data = await response.json();
+
+    // Map API response to match the expected structure
+    return data.map((friend: { id: number; username: string }) => ({
+      id: friend.id,
+      name: friend.username, // Rename username to name
+    }));
   } catch (error) {
     console.error("Error fetching friends:", error);
     throw error;
@@ -330,7 +337,7 @@ export const fetchFriends = async () => {
 export const removeFriend = async (friendId: number) => {
   try {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/friend/${friendId}/remove/`, {
+    const response = await fetch(`${API_BASE_URL}/api/friends/remove/${friendId}/`, {
       method: "DELETE",
       headers,
     });
@@ -385,6 +392,32 @@ export const fetchUserRoutines = async (): Promise<UserRoutineResponse> => {
     return data;
   } catch (error) {
     console.error("Error fetching user routines:", error);
+    throw error;
+  }
+};
+
+
+export const fetchFriendRequests = async (): Promise<FriendRequest[]> => {
+  try {
+    const accessToken = await AsyncStorage.getItem("access_token");
+    const response = await fetch(`${API_BASE_URL}/api/friends/requests/`, { // Replace with your actual endpoint
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch friend requests: HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data as FriendRequest[]; // Type assertion
+
+  } catch (error: any) {
+    console.error("Error fetching friend requests:", error);
+    Alert.alert("Error", error.message || "Failed to fetch friend requests.");
     throw error;
   }
 };

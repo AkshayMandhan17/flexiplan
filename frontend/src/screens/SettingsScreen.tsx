@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
-  Image,
   TouchableOpacity,
   FlatList,
   Switch,
@@ -12,19 +11,21 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
-import { createStackNavigator } from "@react-navigation/stack"; // Import createStackNavigator
-import UserHobbiesScreen from "./UserHobbiesScreen"; // Import UserHobbiesScreen
-import { useAuth } from "../components/AuthContext";
-import UserTasksScreen from "./UserTasksScreen";
+import { createStackNavigator } from "@react-navigation/stack";
+import UserHobbiesScreen from "./UserHobbiesScreen"; // Make sure this path is correct
+import { useAuth } from "../components/AuthContext"; // Make sure this path is correct
+import UserTasksScreen from "./UserTasksScreen"; // Make sure this path is correct
 import LottieView from "lottie-react-native";
-const SettingsStack = createStackNavigator(); // Create a StackNavigator
+import FriendsScreen from "./FriendsScreen"; // Make sure this path is correct
 
-// the following two types are basically resolving the typescript mismatch for navigation
+const SettingsStack = createStackNavigator();
+
 type RootStackParamList = {
   SettingsContent: undefined;
   UserHobbies: undefined;
   UserTasks: undefined;
-  Login: undefined;
+  Login: undefined; //  Important if you navigate to Login on logout
+  FriendsScreen: undefined;
 };
 
 type SettingsScreenContentNavigationProp = NavigationProp<
@@ -32,11 +33,12 @@ type SettingsScreenContentNavigationProp = NavigationProp<
   "SettingsContent"
 >;
 
+// This is your main Settings screen component
 const SettingsScreen = () => {
   const navigation = useNavigation<SettingsScreenContentNavigationProp>();
   const [username, setUsername] = useState<string>("");
   const [isOffDay, setIsOffDay] = useState(false);
-  const { setIsLoggedIn } = useAuth();
+  const { setIsLoggedIn } = useAuth(); // Get setIsLoggedIn from AuthContext
 
   const handleLogout = async () => {
     Alert.alert(
@@ -55,13 +57,13 @@ const SettingsScreen = () => {
               await AsyncStorage.removeItem("access_token");
               await AsyncStorage.removeItem("refresh_token");
               await AsyncStorage.removeItem("user_id");
-              await AsyncStorage.removeItem("user_username"); // Clear username as well
+              await AsyncStorage.removeItem("user_username");
 
-              // Update AuthContext
+              // Update AuthContext to indicate logout
               setIsLoggedIn(false);
 
-              // Navigate to Login screen
-              // navigation.navigate('Login'); // Navigate to Login screen (ensure you have a Login screen route)
+              // Navigate to the Login screen.  This assumes you have a 'Login' route.
+              navigation.navigate("Login");
             } catch (error) {
               console.error("Failed to log out:", error);
               Alert.alert("Error", "Failed to log out. Please try again.");
@@ -87,23 +89,22 @@ const SettingsScreen = () => {
     {
       id: "3",
       title: "View Saved Routines",
-      action: () => console.log("View Saved Routines"),
+      action: () => console.log("View Saved Routines"), // Replace with actual navigation
     },
     {
       id: "4",
       title: "View Friends",
-      action: () => console.log("View Friends"),
+      action: () => navigation.navigate("FriendsScreen"),
     },
-
     {
       id: "5",
       title: "Update Username",
-      action: () => console.log("Update Username"),
+      action: () => console.log("Update Username"), //  Implement username update logic
     },
     {
       id: "6",
       title: "Change Password",
-      action: () => console.log("Change Password"),
+      action: () => console.log("Change Password"), // Implement password change logic
     },
     { id: "7", title: "Logout", action: handleLogout },
   ];
@@ -127,19 +128,11 @@ const SettingsScreen = () => {
     <View style={styles.container}>
       <View style={styles.profileSection}>
         <View style={styles.profileImageWrapper}>
-          {/* <Image
-            source={{ uri: 'https://via.placeholder.com/100' }}
-            style={styles.profileImage}
-          /> */}
           <LottieView
-            source={require("../../lotties/User.json")} // Ensure correct path
+            source={require("../../lotties/User.json")} //  Double-check this path!
             autoPlay
             loop
-            style={{
-              width: 200,
-              height: 150,
-              marginBottom: 8,
-            }}
+            style={styles.lottie}
           />
           <TouchableOpacity style={styles.editIcon}>
             <Text style={styles.editText}>✏️</Text>
@@ -173,7 +166,34 @@ const SettingsScreen = () => {
   );
 };
 
-export default SettingsScreen;
+// Wrapper component for the Settings stack navigator
+const SettingsStackScreen = () => {
+  return (
+    <SettingsStack.Navigator>
+      <SettingsStack.Screen
+        name="SettingsContent"
+        component={SettingsScreen}
+        options={{ title: "Settings" }}
+      />
+      <SettingsStack.Screen
+        name="UserHobbies"
+        component={UserHobbiesScreen}
+        options={{ title: "Hobbies" }}
+      />
+      <SettingsStack.Screen
+        name="UserTasks"
+        component={UserTasksScreen}
+        options={{ title: "Tasks" }}
+      />
+      <SettingsStack.Screen
+        name="FriendsScreen"
+        component={FriendsScreen}
+        options={{ title: "Friends" }}
+      />
+      {/* Add other screens related to settings here */}
+    </SettingsStack.Navigator>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -187,13 +207,11 @@ const styles = StyleSheet.create({
   },
   profileImageWrapper: {
     position: "relative",
+    alignItems: "center", // Center the LottieView
   },
-  profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 2,
-    borderColor: "#ddd",
+  lottie: {
+    width: 150,
+    height: 150,
   },
   editIcon: {
     position: "absolute",
@@ -202,7 +220,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 12,
     padding: 4,
-    elevation: 4,
+    elevation: 4, // Add a shadow on Android
   },
   editText: {
     fontSize: 12,
@@ -234,3 +252,5 @@ const styles = StyleSheet.create({
     color: "#333",
   },
 });
+
+export default SettingsStackScreen; // Export the Stack Navigator!
