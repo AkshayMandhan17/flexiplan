@@ -7,42 +7,180 @@ import {
   TouchableOpacity,
   ScrollView,
   StatusBar,
-  Animated
+  Animated,
+  Alert,
+  Switch,
 } from "react-native";
 import { ProgressBar } from "react-native-paper";
 import { Checkbox } from "react-native-paper";
 import { Swipeable } from "react-native-gesture-handler";
-import { Ionicons } from "@expo/vector-icons";
-import Feather from 'react-native-vector-icons/Feather';
-import Icon from 'react-native-vector-icons/Ionicons';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
+// import { Ionicons } from "@expo/vector-icons";
+import Feather from "react-native-vector-icons/Feather";
+import Icon from "react-native-vector-icons/Ionicons";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+import FontAwesome from "react-native-vector-icons/FontAwesome";
+import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import AsyncStorage from "@react-native-async-storage/async-storage"; // Import AsyncStorage
 import { Dimensions } from "react-native";
 import { RoutineData, UserRoutineResponse } from "../utils/model";
 import { fetchUserRoutines } from "../utils/api";
+import { createStackNavigator } from "@react-navigation/stack";
+import { NavigationProp, useNavigation } from "@react-navigation/native";
+import { useAuth } from "../components/AuthContext"; // Make sure this path is correct
 
+const SettingsStack = createStackNavigator();
 const windowHeight = Dimensions.get("window").height;
+
+type RootStackParamList = {
+  SettingsContent: undefined;
+  UserHobbies: undefined;
+  UserTasks: undefined;
+  Login: undefined; //  Important if you navigate to Login on logout
+  FriendsScreen: undefined;
+};
+
+type SettingsScreenContentNavigationProp = NavigationProp<
+  RootStackParamList,
+  "SettingsContent"
+>;
 
 const HomeScreen = () => {
   const tabBarHeight = useBottomTabBarHeight();
   const [isSidebarVisible, setSidebarVisible] = useState(false);
-  const [sidebarAnimation] = useState(new Animated.Value(-250));
-  const [weeklyRoutineData, setWeeklyRoutineData] = useState<RoutineData | null>(null);
+  const [sidebarAnimation] = useState(new Animated.Value(250));
+  const [weeklyRoutineData, setWeeklyRoutineData] =
+    useState<RoutineData | null>(null);
   const [currentDayIndex, setCurrentDayIndex] = useState<number>(0); // 0 for today, -1 for yesterday, 1 for tomorrow, etc.
-  const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const daysOfWeek = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
   const [tasks, setTasks] = useState<any[]>([]); // Tasks for the current day
-  const [routines, setRoutines] = useState([ // Static routines data
+  const [routines, setRoutines] = useState([
+    // Static routines data
     { id: "1", name: "This Week", emoji: "☀️", progress: 0.4 },
     { id: "2", name: "Jatin Routine", emoji: "😎", progress: 0 },
     { id: "3", name: "Fitness", emoji: "💪", progress: 0.7 },
   ]);
   const [activeRoutine, setActiveRoutine] = useState("1");
+  const navigation = useNavigation<SettingsScreenContentNavigationProp>();
+  const [username, setUsername] = useState<string>("");
+  const [isOffDay, setIsOffDay] = useState(false);
+  const { setIsLoggedIn } = useAuth();
+
+  const handleLogout = async () => {
+    Alert.alert(
+      "Log Out",
+      "Are you sure you want to log out?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "OK",
+          onPress: async () => {
+            try {
+              // Clear AsyncStorage
+              await AsyncStorage.removeItem("access_token");
+              await AsyncStorage.removeItem("refresh_token");
+              await AsyncStorage.removeItem("user_id");
+              await AsyncStorage.removeItem("user_username");
+
+              // Update AuthContext to indicate logout
+              setIsLoggedIn(false);
+
+              // Navigate to the Login screen.  This assumes you have a 'Login' route.
+              navigation.navigate("Login");
+            } catch (error) {
+              console.error("Failed to log out:", error);
+              Alert.alert("Error", "Failed to log out. Please try again.");
+            }
+          },
+        },
+      ],
+      { cancelable: false }
+    );
+  };
+
+  const settings = [
+    {
+      id: "1",
+      title: "View Hobbies",
+      action: () => navigation.navigate("UserHobbies"),
+      IconFamily: 'FontAwesome5',
+      IconName:'hospital-symbol',
+    },
+    {
+      id: "2",
+      title: "View Tasks",
+      action: () => navigation.navigate("UserTasks"),
+      IconFamily: 'FontAwesome',
+      IconName:'tasks',
+    },
+    {
+      id: "3",
+      title: "View Saved Routines",
+      action: () => console.log("View Saved Routines"), // Replace with actual navigation
+      IconFamily: 'FontAwesome',
+      IconName:'life-saver',
+    },
+    {
+      id: "4",
+      title: "View Friends",
+      action: () => navigation.navigate("FriendsScreen"),
+      IconFamily: 'Icon',
+      IconName:'people-outline',
+    },
+    {
+      id: "5",
+      title: "Update Username",
+      action: () => console.log("Update Username"), //  Implement username update logic
+      IconFamily: 'FontAwesome',
+      IconName:'user',
+    },
+    {
+      id: "6",
+      title: "Change Password",
+      action: () => console.log("Change Password"), // Implement password change logic
+      IconFamily: 'MaterialIcons',
+      IconName:'password',
+    },
+    { 
+      id: "7", 
+      title: "Logout", 
+      action: handleLogout,
+      IconFamily: 'Icon',
+      IconName:'log-out-outline', 
+    },
+  ];
+
+  useEffect(() => {
+    const fetchUserDetails = async () => {
+      try {
+        const savedUsername = await AsyncStorage.getItem("user_username");
+        if (savedUsername) {
+          setUsername(savedUsername);
+        }
+      } catch (error) {
+        console.error("Failed to fetch username from AsyncStorage:", error);
+      }
+    };
+
+    fetchUserDetails();
+  }, []);
 
   const toggleSidebar = () => {
     if (isSidebarVisible) {
       Animated.timing(sidebarAnimation, {
-        toValue: -250,
+        toValue: 250,
         duration: 300,
         useNativeDriver: true,
       }).start(() => setSidebarVisible(false));
@@ -57,8 +195,16 @@ const HomeScreen = () => {
   };
 
   const Sidebar = () => (
-    <Animated.View style={[styles.sidebar, { transform: [{ translateX: sidebarAnimation }] }, { height: windowHeight - 55 }]}>
-      <TouchableOpacity style={styles.closeSidebarButton} onPress={toggleSidebar}>
+    <Animated.View
+      style={[
+        styles.sidebar,
+        { transform: [{ translateX: sidebarAnimation }] },
+      ]}
+    >
+      <TouchableOpacity
+        style={styles.closeSidebarButton}
+        onPress={toggleSidebar}
+      >
         <Icon name="menu-outline" size={30} color="white" />
       </TouchableOpacity>
       <View style={styles.welcomeContainer}>
@@ -69,22 +215,64 @@ const HomeScreen = () => {
           <Icon name="home-outline" size={24} color="white" />
           <Text style={styles.menuText}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem}>
+        {/* <TouchableOpacity style={styles.menuItem}>
           <Icon name="person-outline" size={24} color="white" />
           <Text style={styles.menuText}>Profile</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem}>
+        </TouchableOpacity> */}
+        {/* <TouchableOpacity style={styles.menuItem}>
           <Icon name="settings-outline" size={24} color="white" />
           <Text style={styles.menuText}>Settings</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem}>
+        </TouchableOpacity> */}
+        {/* <TouchableOpacity style={styles.menuItem}>
           <Icon name="people-outline" size={24} color="white" />
           <Text style={styles.menuText}>Add Friend</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem}>
+        </TouchableOpacity> */}
+        {/* <TouchableOpacity style={styles.menuItem}>
           <Icon name="log-out-outline" size={24} color="white" />
           <Text style={styles.menuText}>Logout</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
+
+        <FlatList
+          data={settings}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity style={styles.menuItem} onPress={item.action}>
+              {
+                item.IconFamily === 'FontAwesome' ? <FontAwesome name={item.IconName} size={24} color="white" /> : 
+                item.IconFamily === 'FontAwesome5' ? <FontAwesome5 name={item.IconName} size={24} color="white" /> :
+                item.IconFamily === 'MaterialIcons' ? <MaterialIcons name={item.IconName} size={24} color="white" /> :
+                item.IconFamily === 'Ionicons' ? <Ionicons name={item.IconName} size={24} color="white" /> :
+                item.IconFamily === 'Icon' ? <Icon name={item.IconName} size={24} color="white" /> : null
+              }
+              <Text style={styles.menuText}>{item.title}</Text>
+            </TouchableOpacity>
+          )}
+        />
+
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingHorizontal: 2,
+            backgroundColor: "rgba(197, 110, 50, 0.5)",
+          }}
+        >
+          <Text style={{ fontSize: 24, color: "#e0e0e0", fontWeight: "900" }}>
+            Off Day
+          </Text>
+          <Switch
+            value={isOffDay}
+            onValueChange={setIsOffDay} // simplified callback
+            thumbColor={isOffDay ? "#4CAF90" : "#f5f5f5"}
+            trackColor={{
+              false: "#e0e0e0",
+              true: "#A5D6C7",
+            }}
+            ios_backgroundColor="#e0e0e0" // for iOS
+            style={{ transform: [{ scaleX: 1.1 }, { scaleY: 1.1 }] }}
+          />
+        </View>
       </View>
     </Animated.View>
   );
@@ -105,7 +293,8 @@ const HomeScreen = () => {
 
   useEffect(() => {
     if (weeklyRoutineData) {
-      const currentDayName = daysOfWeek[(new Date().getDay() + currentDayIndex + 7) % 7]; // Ensure positive index
+      const currentDayName =
+        daysOfWeek[(new Date().getDay() + currentDayIndex + 7) % 7]; // Ensure positive index
       const dailyTasks = weeklyRoutineData[currentDayName] || [];
       const formattedTasks = dailyTasks.map((task, index) => ({
         id: String(index), // Or generate a more unique ID if needed
@@ -120,10 +309,14 @@ const HomeScreen = () => {
 
   const getEmojiForType = (type: string): string => {
     switch (type) {
-      case "work": return "💼";
-      case "personal": return "🧘";
-      case "hobby": return "🎨";
-      default: return "🗓️";
+      case "work":
+        return "💼";
+      case "personal":
+        return "🧘";
+      case "hobby":
+        return "🎨";
+      default:
+        return "🗓️";
     }
   };
 
@@ -164,28 +357,46 @@ const HomeScreen = () => {
     displayDate.setDate(today.getDate() + currentDayIndex);
     const dayName = daysOfWeek[displayDate.getDay()];
     const date = displayDate.getDate();
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthNames = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
     const monthName = monthNames[displayDate.getMonth()];
     return `${monthName} ${date} • ${dayName}`;
   };
 
   const getSectionHeading = () => {
     if (currentDayIndex === 0) return "Today's To Do";
-    const dayDiff = ['days ago', 'day ago', 'Today', 'Tomorrow', 'days later'];
+    const dayDiff = ["days ago", "day ago", "Today", "Tomorrow", "days later"];
     const indexForDiff = currentDayIndex + 2;
-    const dayText = dayDiff[indexForDiff] || (currentDayIndex > 0 ? `${currentDayIndex} days later` : `${Math.abs(currentDayIndex)} days ago`);
-    return `${daysOfWeek[(new Date().getDay() + currentDayIndex + 7) % 7]}'s To Do`; // Fallback for other days
+    const dayText =
+      dayDiff[indexForDiff] ||
+      (currentDayIndex > 0
+        ? `${currentDayIndex} days later`
+        : `${Math.abs(currentDayIndex)} days ago`);
+    return `${
+      daysOfWeek[(new Date().getDay() + currentDayIndex + 7) % 7]
+    }'s To Do`; // Fallback for other days
   };
 
-
   return (
-    <View style={{flex: 1}}>
+    <View style={{ flex: 1 }}>
       <StatusBar barStyle={"light-content"} />
       <TouchableOpacity style={styles.sidebarToggle} onPress={toggleSidebar}>
         <Icon name="menu-outline" size={30} color="black" />
       </TouchableOpacity>
       {isSidebarVisible && <Sidebar />}
-      <View style={{ height: 230, backgroundColor: '#f9f9f9', paddingTop: 20}}>
+      <View style={{ height: 230, backgroundColor: "#f9f9f9" }}>
         <View style={styles.header}>
           <Text style={styles.heading}>Routines</Text>
         </View>
@@ -195,7 +406,10 @@ const HomeScreen = () => {
           keyExtractor={(item) => item.id}
           showsHorizontalScrollIndicator={false}
           renderItem={({ item }) => (
-            <TouchableOpacity activeOpacity={1} onPress={() => setActiveRoutine(item.id)}>
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={() => setActiveRoutine(item.id)}
+            >
               <View
                 style={[
                   styles.routineCard,
@@ -220,13 +434,22 @@ const HomeScreen = () => {
         />
       </View>
 
-      <ScrollView style={{flex: 1, backgroundColor: '#f9f9f9'}}>
+      <ScrollView style={{ flex: 1, backgroundColor: "#f9f9f9" }}>
         <View style={styles.section}>
-          <View style={[styles.header, {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}]}>
+          <View
+            style={[
+              styles.header,
+              {
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+              },
+            ]}
+          >
             <TouchableOpacity onPress={() => changeDay(-1)}>
               <Icon name="chevron-back-outline" size={24} color="#76c7c0" />
             </TouchableOpacity>
-            <View style={{alignItems: 'center'}}>
+            <View style={{ alignItems: "center" }}>
               <Text style={styles.heading}>{getSectionHeading()}</Text>
               <Text style={styles.dateText}>{getCurrentDayText()}</Text>
             </View>
@@ -275,11 +498,11 @@ const styles = StyleSheet.create({
   },
   header: {
     height: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   heading: {
-    color: 'black',
+    color: "black",
     fontSize: 24,
   },
   seeAll: {
@@ -384,54 +607,56 @@ const styles = StyleSheet.create({
   },
   welcomeContainer: {
     marginTop: 50,
-    alignItems: 'center',
-    backgroundColor: '#222',
+    alignItems: "center",
+    backgroundColor: "#222",
     padding: 20,
     borderRadius: 10,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
     elevation: 5,
-    width: '100%',
+    width: "100%",
   },
   closeSidebarButton: {
-    position: 'absolute',
-    right: 10,
+    position: "absolute",
+    left: 10,
     marginTop: 40,
   },
   brandName: {
-    color: '#FFC107',
+    color: "#FFC107",
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginTop: 10,
   },
   welcomeText: {
-    color: 'white',
+    color: "white",
     fontSize: 18,
     marginTop: 10,
-    alignSelf: 'center',
+    alignSelf: "center",
   },
   menuItems: {
     marginTop: 20,
+    height:'80%',
   },
   menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 15,
   },
   menuText: {
-    color: 'white',
+    color: "white",
     fontSize: 16,
     marginLeft: 10,
   },
   sidebarToggle: {
-    marginLeft: 10,
-    marginTop: 60,
+    marginRight: 10,
+    marginTop: 40,
+    alignSelf: "flex-end",
   },
   sidebar: {
     position: "absolute",
-    left: 0,
+    right: 0,
     top: 0,
     bottom: 0,
     width: 250,
@@ -439,5 +664,7 @@ const styles = StyleSheet.create({
     zIndex: 2,
     paddingHorizontal: 15,
     paddingVertical: 30,
+    borderTopLeftRadius: 20,
+    borderBottomLeftRadius: 20,
   },
 });
