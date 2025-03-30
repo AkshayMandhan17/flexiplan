@@ -7,4 +7,5 @@ urlpatterns = [
     path('users/<int:user_id>/tasks/', UserTasksView.as_view(), name='user-tasks'), 
     path('users/<int:user_id>/tasks/<int:task_id>/', UserTaskDetailView.as_view(), name='user-task-detail'), 
     path('user-routine/', UserRoutineView.as_view(), name='user-routines'),
+    
 ]

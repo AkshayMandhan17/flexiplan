@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Task, User, Friendship
+from chat.models import Message
 
 
 class SignupSerializer(serializers.ModelSerializer):
@@ -41,3 +42,11 @@ class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = '__all__'
+
+class MessageSerializer(serializers.ModelSerializer):
+    sender = UserSerializer(read_only=True)
+    receiver = UserSerializer(read_only=True)
+
+    class Meta:
+        model = Message
+        fields = ['id', 'sender', 'receiver', 'message', 'timestamp', 'is_read']

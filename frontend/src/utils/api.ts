@@ -421,3 +421,70 @@ export const fetchFriendRequests = async (): Promise<FriendRequest[]> => {
     throw error;
   }
 };
+
+// Get all messages between the authenticated user and a friend
+export const fetchMessages = async (friendId: number) => {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/api/messages/${friendId}/`, {
+      method: "GET",
+      headers,
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || "Failed to fetch messages");
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    console.error("Error fetching messages:", error);
+    Alert.alert("Error", error.message || "Failed to fetch messages.");
+    throw error;
+  }
+};
+
+// Send a message to a friend
+export const sendMessage = async (friendId: number, message: string) => {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/api/messages/${friendId}/send/`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ message }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || "Failed to send message");
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    console.error("Error sending message:", error);
+    Alert.alert("Error", error.message || "Failed to send message.");
+    throw error;
+  }
+};
+
+// Mark messages from a friend as read
+export const markMessagesAsRead = async (friendId: number) => {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/api/messages/${friendId}/mark-read/`, {
+      method: "POST",
+      headers,
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || "Failed to mark messages as read");
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    console.error("Error marking messages as read:", error);
+    Alert.alert("Error", error.message || "Failed to mark messages as read.");
+    throw error;
+  }
+};
