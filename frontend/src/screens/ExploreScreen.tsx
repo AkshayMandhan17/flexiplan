@@ -17,12 +17,12 @@ import { Hobby } from "../utils/model";
 
 // Mapping categories to their respective Lottie animation files
 const categoryAnimations: Record<string, any> = {
-  Art: require("../../lotties/Sports.json"),
+  Art: require("../../lotties/Art.json"),
   Sports: require("../../lotties/Sports.json"),
   Music: require("../../lotties/Music.json"),
-  Tech: require("../../lotties/Sports.json"),
-  Travel: require("../../lotties/Sports.json"),
-  Cooking: require("../../lotties/Sports.json"),
+  Tech: require("../../lotties/Tech.json"),
+  Travel: require("../../lotties/Travel.json"),
+  Cooking: require("../../lotties/Cooking.json"),
   Default: require("../../lotties/Sports.json"), // Fallback animation
 };
 
