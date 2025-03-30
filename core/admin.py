@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import User, Hobby, UserHobby, Routine, UserRoutine, Task, Message, UserSetting, UserStatus, RoutineFeedback, Notification, Friendship
+from .models import User, Hobby, UserHobby, Routine, UserRoutine, Task, UserSetting, UserStatus, RoutineFeedback, Notification, Friendship
+from chat.models import Message
 
 # Register models here
 admin.site.register(User)
