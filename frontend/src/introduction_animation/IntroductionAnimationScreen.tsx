@@ -17,6 +17,7 @@ import {
   TopBackSkipView,
   CenterNextButton,
 } from './scenes';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const IntroductionAnimationScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -32,6 +33,14 @@ const IntroductionAnimationScreen: React.FC = () => {
       animValue.current = value;
       setCurrentPage(value);
     });
+  }, []);
+
+  useEffect(() => {
+    const markIntroSeen = async () => {
+      await AsyncStorage.setItem('hasSeenIntro', 'true');
+    };
+
+    markIntroSeen();
   }, []);
 
   const relaxTranslateY = animationController.current.interpolate({
