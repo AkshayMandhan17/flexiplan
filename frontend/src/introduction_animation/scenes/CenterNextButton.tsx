@@ -3,6 +3,8 @@ import { StyleSheet, Text, Animated, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import NextButtonArrow from './components/NextButtonArrow';
 import { useNavigation } from '@react-navigation/native';
+import { RootStackParamList } from '../../../App';
+import { StackNavigationProp } from "@react-navigation/stack";
 
 interface Props {
   onNextClick: () => void;
@@ -43,7 +45,6 @@ const CenterNextButton: React.FC<Props> = ({
   onNextClick,
   animationController,
 }) => {
-  const navigation = useNavigation(); 
   const opacity
    = useRef<Animated.Value>(new Animated.Value(0));
   const currentOpacity = useRef<number>(0);
@@ -54,6 +55,7 @@ const CenterNextButton: React.FC<Props> = ({
   const paddingBottom = 16 + bottom;
 
   const dots = useMemo(() => [0, 1, 2, 3], []);
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
 
   useEffect(() => {
     // I think this condition could be better?

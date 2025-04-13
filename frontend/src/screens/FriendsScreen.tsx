@@ -12,6 +12,10 @@ import {
 } from 'react-native';
 import { fetchFriends, removeFriend } from '../utils/api';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from "@react-navigation/native";
+import { RootStackParamList } from '../../App';
+import { StackNavigationProp } from "@react-navigation/stack";
+
 
 // Types
 interface Friend {
@@ -48,19 +52,23 @@ function ErrorView({ message, onRetry }: { message: string; onRetry: () => void 
   );
 }
 
-function FriendItem({ friend, onRemove }: { friend: Friend; onRemove: (id: number) => void }) {
+function FriendItem({ friend, onRemove, onPress }: { friend: Friend; onRemove: (id: number) => void; onPress: (friend: Friend) => void; }) {
+    // const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   return (
-    <View style={styles.friendItem}>
+    <TouchableOpacity onPress={() => onPress(friend)} style={styles.friendItem}>
       <Ionicons name="person-circle-outline" size={40} color="white" style={styles.friendIcon} />
       <Text style={styles.friendName}>{friend.name}</Text>
       <TouchableOpacity onPress={() => onRemove(friend.id)} style={styles.removeButton}>
         <Ionicons name="trash-outline" size={24} color="red" />
       </TouchableOpacity>
-    </View>
+    </TouchableOpacity>
   );
 }
 
 function FriendsScreen() {
+  // const navigation = useNavigation(); // Add this at the top of FriendsScreen
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+
   const [state, setState] = useState<FriendsScreenState>({
     friends: [],
     loading: true,
@@ -132,9 +140,20 @@ function FriendsScreen() {
     []
   );
 
+  const handlePressFriend = useCallback(
+    (friend: Friend) => {
+      navigation.navigate('Chats', {
+        friendId: friend.id,
+        friendName: friend.name,
+        friendAvatar: `https://api.dicebear.com/7.x/initials/svg?seed=${friend.name}`,
+      });
+    },
+    [navigation]
+  );
+
   const renderItem: ListRenderItem<Friend> = useCallback(
-    ({ item }) => <FriendItem friend={item} onRemove={handleRemoveFriend} />,
-    [handleRemoveFriend]
+    ({ item }) => <FriendItem friend={item} onRemove={handleRemoveFriend} onPress={handlePressFriend} />,
+    [handleRemoveFriend, handlePressFriend]
   );
 
   if (state.loading) {

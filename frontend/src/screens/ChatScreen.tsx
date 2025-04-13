@@ -1,4 +1,195 @@
-import React, { useState } from 'react';
+// import React, { useState, useEffect } from 'react';
+// import {
+//   View,
+//   Text,
+//   TextInput,
+//   TouchableOpacity,
+//   FlatList,
+//   Image,
+//   StyleSheet,
+// } from 'react-native';
+// import { RouteProp, useRoute } from '@react-navigation/native';
+// import { RootStackParamList } from '../../App';
+// import { fetchMessages } from "../utils/api"; // ✅ Import addUserTask service
+
+// type ChatScreenRouteProp = RouteProp<RootStackParamList, 'Chats'>;
+
+// const ChatScreen = () => {
+//   const route = useRoute<ChatScreenRouteProp>();
+//   const { friendId, friendName, friendAvatar } = route.params;
+//   const [messages, setMessages] = useState(null);
+//   const [newMessage, setNewMessage] = useState('');
+
+//   useEffect(() => {
+//     const loadMessages = async () => {
+//       try {
+//         const msgs = await fetchMessages(friendId);
+//         setMessages(msgs); // assuming msgs is an array
+//       } catch (err) {
+//         console.log('Failed to load messages', err);
+//       }
+//     };
+  
+//     loadMessages();
+//   }, [friendId]);
+
+//   const handleSendMessage = async () => {
+//     if (!newMessage.trim()) return;
+  
+//     try {
+//       await sendMessage(friendId, newMessage);
+//       setNewMessage('');
+  
+//       // Reload messages after sending
+//       const msgs = await fetchMessages(friendId);
+//       setMessages(msgs);
+//     } catch (err) {
+//       console.log("Error sending message", err);
+//     }
+//   };
+  
+
+
+//   return (
+//     <View style={styles.container}>
+//       {/* Header */}
+//       <View style={styles.header}>
+//         <Image source={{ uri: friendAvatar }} style={styles.avatar} />
+//         <Text style={styles.friendName}>{friendName}</Text>
+//         <TouchableOpacity>
+//           <Text style={styles.menuDots}>⋮</Text>
+//         </TouchableOpacity>
+//       </View>
+
+//       {/* Chat Messages */}
+//       <FlatList
+//         data={messages}
+//         keyExtractor={(item) => item.id}
+//         renderItem={({ item }) => (
+//           <View
+//             style={[
+//               styles.chatBubble,
+//               item.sender ? styles.senderBubble : styles.receiverBubble,
+//             ]}
+//           >
+//             <Text style={styles.messageText}>{item.text}</Text>
+//             <Text style={styles.messageTime}>{item.time}</Text>
+//           </View>
+//         )}
+//         contentContainerStyle={styles.chatContainer}
+//       />
+
+//       {/* Chat Input Bar */}
+//       <View style={styles.inputBar}>
+//         <TextInput
+//           style={styles.input}
+//           placeholder="Type a message..."
+//           value={newMessage}
+//           onChangeText={setNewMessage}
+//         />
+//         <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
+//           <Text style={styles.sendButtonText}>Send</Text>
+//         </TouchableOpacity>
+//       </View>
+//     </View>
+//   );
+// };
+
+// const styles = StyleSheet.create({
+//   container: {
+//     flex: 1,
+//     backgroundColor: '#fff',
+//   },
+//   header: {
+//     height: 60,
+//     backgroundColor: '#f5f5f5',
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//     justifyContent: 'space-between',
+//     paddingHorizontal: 16,
+//     borderBottomWidth: 1,
+//     borderBottomColor: '#e0e0e0',
+//   },
+//   avatar: {
+//     width: 40,
+//     height: 40,
+//     borderRadius: 20,
+//   },
+//   friendName: {
+//     flex: 1,
+//     fontSize: 18,
+//     fontWeight: 'bold',
+//     marginLeft: 12,
+//   },
+//   menuDots: {
+//     fontSize: 20,
+//     color: '#888',
+//   },
+//   chatContainer: {
+//     flexGrow: 1,
+//     paddingHorizontal: 16,
+//     paddingVertical: 8,
+//   },
+//   chatBubble: {
+//     maxWidth: '75%',
+//     borderRadius: 12,
+//     padding: 12,
+//     marginBottom: 10,
+//   },
+//   senderBubble: {
+//     alignSelf: 'flex-end',
+//     backgroundColor: '#9dbfb6',
+//   },
+//   receiverBubble: {
+//     alignSelf: 'flex-start',
+//     backgroundColor: '#f0f0f0',
+//   },
+//   messageText: {
+//     fontSize: 16,
+//     color: '#333',
+//   },
+//   messageTime: {
+//     fontSize: 12,
+//     color: '#666',
+//     marginTop: 4,
+//     textAlign: 'right',
+//   },
+//   inputBar: {
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//     paddingHorizontal: 16,
+//     paddingVertical: 8,
+//     borderTopWidth: 1,
+//     borderTopColor: '#e0e0e0',
+//     backgroundColor: '#f5f5f5',
+//   },
+//   input: {
+//     flex: 1,
+//     height: 40,
+//     borderRadius: 20,
+//     paddingHorizontal: 16,
+//     backgroundColor: '#fff',
+//     borderWidth: 1,
+//     borderColor: '#ccc',
+//   },
+//   sendButton: {
+//     marginLeft: 12,
+//     paddingVertical: 8,
+//     paddingHorizontal: 16,
+//     borderRadius: 20,
+//     backgroundColor: '#9dbfb6',
+//   },
+//   sendButtonText: {
+//     color: '#fff',
+//     fontSize: 16,
+//     fontWeight: 'bold',
+//   },
+// });
+
+// export default ChatScreen;
+
+
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,32 +198,85 @@ import {
   FlatList,
   Image,
   StyleSheet,
+  Alert,
 } from 'react-native';
+import { RouteProp, useRoute } from '@react-navigation/native';
+import { RootStackParamList } from '../../App';
+import { fetchMessages, sendMessage as sendMessageAPI, markMessagesAsRead } from "../utils/api";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+type ChatScreenRouteProp = RouteProp<RootStackParamList, 'Chats'>;
 
 const ChatScreen = () => {
-  const friendName = "Akshay";
-  const friendAvatar= "https://via.placeholder.com/50";
-  const [messages, setMessages] = useState([
-    { id: '1', text: 'Hi there!', sender: false, time: '10:00 AM' },
-    { id: '2', text: 'Hello! How are you?', sender: true, time: '10:01 AM' },
-    { id: '3', text: 'I’m good, thanks for asking!', sender: false, time: '10:02 AM' },
-  ]);
-  const [newMessage, setNewMessage] = useState('');
+  const route = useRoute<ChatScreenRouteProp>();
+  const { friendId, friendName, friendAvatar } = route.params;
 
-  const sendMessage = () => {
-    if (newMessage.trim()) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (prev.length + 1).toString(),
-          text: newMessage.trim(),
-          sender: true,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        },
-      ]);
-      setNewMessage('');
+  const [messages, setMessages] = useState<any[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [username, setUsername] = useState<string>("");
+  
+
+  const loadMessages = async () => {
+    try {
+      const msgs = await fetchMessages(friendId);
+      const sortedMsgs = msgs.sort(
+        (a: { timestamp: string }, b: { timestamp: string }) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+  
+      setMessages(sortedMsgs);
+    } catch (err) {
+      console.log('Failed to load messages', err);
     }
   };
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim()) return;
+
+    try {
+      await sendMessageAPI(friendId, newMessage);
+      setNewMessage('');
+      await loadMessages(); // Refresh after sending
+    } catch (err) {
+      console.log("Error sending message", err);
+    }
+  };
+
+  useEffect(() => {
+    const initChat = async () => {
+      await loadMessages();
+      await markMessagesAsRead(friendId);
+    };
+    initChat();
+  }, [friendId]);
+
+  const formatTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    let hours = date.getHours();
+    const minutes = date.getMinutes();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    
+    hours = hours % 12;
+    hours = hours ? hours : 12; // convert hour '0' to '12'
+    const minutesStr = minutes < 10 ? `0${minutes}` : minutes;
+  
+    return `${hours}:${minutesStr} ${ampm}`;
+  };
+  
+  useEffect(() => {
+    const fetchUserDetails = async () => {
+      try {
+        const savedUsername = await AsyncStorage.getItem("user_username");
+        if (savedUsername) {
+          setUsername(savedUsername);
+        }
+      } catch (error) {
+        console.error("Failed to fetch username from AsyncStorage:", error);
+      }
+    };
+
+    fetchUserDetails();
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -48,19 +292,22 @@ const ChatScreen = () => {
       {/* Chat Messages */}
       <FlatList
         data={messages}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <View
             style={[
               styles.chatBubble,
-              item.sender ? styles.senderBubble : styles.receiverBubble,
+              item.sender.username === username ? styles.senderBubble : styles.receiverBubble,
             ]}
           >
-            <Text style={styles.messageText}>{item.text}</Text>
-            <Text style={styles.messageTime}>{item.time}</Text>
+            <Text style={styles.messageText}>{item.message}</Text>
+            {/* <Text style={styles.messageTime}>{item.time}</Text> */}
+            <Text style={styles.messageTime}>{formatTime(item.timestamp)}</Text>
+
           </View>
         )}
         contentContainerStyle={styles.chatContainer}
+        inverted // Newest at the bottom
       />
 
       {/* Chat Input Bar */}
@@ -71,7 +318,7 @@ const ChatScreen = () => {
           value={newMessage}
           onChangeText={setNewMessage}
         />
-        <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
+        <TouchableOpacity style={styles.sendButton} onPress={handleSendMessage}>
           <Text style={styles.sendButtonText}>Send</Text>
         </TouchableOpacity>
       </View>
@@ -130,7 +377,6 @@ const styles = StyleSheet.create({
   },
   messageText: {
     fontSize: 16,
-    color: '#333',
   },
   messageTime: {
     fontSize: 12,

@@ -4,6 +4,8 @@ import { MaterialIcons } from "@expo/vector-icons"; // ✅ Use @expo/vector-icon
 import MyPressable from "../../../components/MyPressable";
 // import { Pressable } from "react-native";
 import { useNavigation } from "@react-navigation/native"; // Import navigation hook
+import { RootStackParamList } from '../../../../App';
+import { StackNavigationProp } from "@react-navigation/stack";
 
 interface Props {
   onBtnPress: () => void;
@@ -12,10 +14,11 @@ interface Props {
 
 /*
  * TODO:- Find a better solution for this animation so we don't have to use 'useNativeDriver: false'
- */
+*/
 const NextButtonArrow: React.FC<Props> = ({ onBtnPress, animationController }) => {
-  const navigation = useNavigation(); // Get navigation instance
-  const arrowAnim = useRef<Animated.AnimatedInterpolation>(
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  // const navigation = useNavigation(); // Get navigation instance
+  const arrowAnim = useRef<Animated.AnimatedInterpolation<number>>(
     new Animated.Value(0)
   );
 
