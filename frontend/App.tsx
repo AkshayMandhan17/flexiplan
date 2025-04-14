@@ -56,10 +56,7 @@ function SocialStackNavigator() {
   return (
     <SocialStack.Navigator screenOptions={{ headerShown: false }}>
       <SocialStack.Screen name="Social" component={SocialScreen} />
-      <SocialStack.Screen
-        name="FriendRequests"
-        component={FriendRequestsScreen}
-      />
+      <SocialStack.Screen name="FriendRequests" component={FriendRequestsScreen} />
       <SocialStack.Screen name="FriendsScreen" component={FriendsScreen} />
     </SocialStack.Navigator>
   );
@@ -175,14 +172,10 @@ const AppNavigator = () => {
             <Stack.Screen name="UserTasks" component={UserTasksScreen} />
             <Stack.Screen name="AddUserTask" component={AddTaskScreen} />
             <Stack.Screen name="Chats" component={ChatScreen} />
+            <Stack.Screen name="FriendsScreen" component={FriendsScreen} />
           </>
         ) : (
           <>
-            {/* <Stack.Screen
-                name="onBoarding"
-                component={IntroductionAnimationScreen}
-                options={{ headerShown: false }}
-              /> */}
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Signup" component={SignupScreen} />
           </>

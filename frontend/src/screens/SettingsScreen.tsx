@@ -17,6 +17,7 @@ import { useAuth } from "../components/AuthContext"; // Make sure this path is c
 import UserTasksScreen from "./UserTasksScreen"; // Make sure this path is correct
 import LottieView from "lottie-react-native";
 import FriendsScreen from "./FriendsScreen"; // Make sure this path is correct
+import Login from "./LoginScreen"; // Make sure this path is correct
 
 const SettingsStack = createStackNavigator();
 
@@ -63,7 +64,7 @@ const SettingsScreen = () => {
               setIsLoggedIn(false);
 
               // Navigate to the Login screen.  This assumes you have a 'Login' route.
-              navigation.navigate("Login");
+              () => navigation.navigate("Login");
             } catch (error) {
               console.error("Failed to log out:", error);
               Alert.alert("Error", "Failed to log out. Please try again.");

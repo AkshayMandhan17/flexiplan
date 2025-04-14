@@ -29,6 +29,7 @@ import { fetchUserRoutines, generateRoutine } from "../utils/api";
 import { createStackNavigator } from "@react-navigation/stack";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
 import { useAuth } from "../components/AuthContext"; // Make sure this path is correct
+import FriendsScreen from "./FriendsScreen"; // Make sure this path is correct
 
 const SettingsStack = createStackNavigator();
 const windowHeight = Dimensions.get("window").height;
@@ -98,7 +99,7 @@ const HomeScreen = () => {
               setIsLoggedIn(false);
 
               // Navigate to the Login screen.  This assumes you have a 'Login' route.
-              navigation.navigate("Login");
+              () => navigation.navigate("Login");
             } catch (error) {
               console.error("Failed to log out:", error);
               Alert.alert("Error", "Failed to log out. Please try again.");
@@ -111,8 +112,17 @@ const HomeScreen = () => {
   };
   const handleGenerateRoutine = async () => {
     const savedId = await AsyncStorage.getItem("user_id");
+    if (savedId === null) {
+      console.log("No user_id found in AsyncStorage");
+      return; // or handle accordingly
+    }
+    
     const userId = parseInt(savedId, 10);
     const newRoutineData = await generateRoutine(userId);
+    if (newRoutineData === undefined) {
+      console.log("Failed to generate routine");
+      return;
+    }
     setWeeklyRoutineData(newRoutineData);
   }
   
