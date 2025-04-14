@@ -21,7 +21,7 @@ if GOOGLE_API_KEY is None:
     raise Exception("Set GOOGLE_API_KEY in your env")
 
 genai.configure(api_key=GOOGLE_API_KEY)
-model = genai.GenerativeModel('gemini-pro')
+model = genai.GenerativeModel('models/gemini-1.5-pro-latest')
 
 # Days of the week for validation and parsing
 daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
@@ -53,8 +53,8 @@ def parse_routine_text(routine_text):
     return routine_data
 
 class GenerateRoutineView(APIView):
-    authentication_classes = [JWTAuthentication]  # Enforce JWT authentication
-    permission_classes = [IsAuthenticated]  # Require authentication
+    # authentication_classes = [JWTAuthentication]  # Enforce JWT authentication
+    # permission_classes = [IsAuthenticated]  # Require authentication
 
     def post(self, request, user_id, *args, **kwargs):  # ✅ Take user_id as path parameter
 
@@ -162,6 +162,13 @@ class GenerateRoutineView(APIView):
                     today = date.today()
                     end_date = today + timedelta(days=7)  # Routine for the next 7 days
 
+                    # Delete only the existing primary routine (if any)
+                    existing_primary = UserRoutine.objects.filter(user=user, is_primary=True).first()
+                    if existing_primary:
+                        existing_primary.routine.delete()  # Deletes the linked Routine
+                        existing_primary.delete()         # Deletes only this UserRoutine
+
+                    # Now create a new routine
                     routine = Routine.objects.create(
                         start_date=today,
                         end_date=end_date,
@@ -171,7 +178,8 @@ class GenerateRoutineView(APIView):
                     UserRoutine.objects.create(
                         user=user,
                         routine=routine,
-                        permission='Edit'  # You can set default permission as needed
+                        permission='Edit',
+                        is_primary=True  # ✅ Set the new one as primary
                     )
                     return Response({"routine": generated_routine}, status=status.HTTP_201_CREATED)
                 except Exception as db_error:  # Catch database errors

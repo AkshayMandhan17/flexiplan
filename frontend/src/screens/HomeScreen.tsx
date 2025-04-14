@@ -25,7 +25,7 @@ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import AsyncStorage from "@react-native-async-storage/async-storage"; // Import AsyncStorage
 import { Dimensions } from "react-native";
 import { RoutineData, UserRoutineResponse } from "../utils/model";
-import { fetchUserRoutines } from "../utils/api";
+import { fetchUserRoutines, generateRoutine } from "../utils/api";
 import { createStackNavigator } from "@react-navigation/stack";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
 import { useAuth } from "../components/AuthContext"; // Make sure this path is correct
@@ -50,8 +50,8 @@ const HomeScreen = () => {
   const tabBarHeight = useBottomTabBarHeight();
   const [isSidebarVisible, setSidebarVisible] = useState(false);
   const [sidebarAnimation] = useState(new Animated.Value(250));
-  const [weeklyRoutineData, setWeeklyRoutineData] =
-    useState<RoutineData | null>(null);
+  const [weeklyRoutineData, setWeeklyRoutineData] = useState<RoutineData | null>(null);
+  const [routineLoadingError, setRoutineLoadingError] = useState<boolean>(false);
   const [currentDayIndex, setCurrentDayIndex] = useState<number>(0); // 0 for today, -1 for yesterday, 1 for tomorrow, etc.
   const daysOfWeek = [
     "Sunday",
@@ -109,7 +109,13 @@ const HomeScreen = () => {
       { cancelable: false }
     );
   };
-
+  const handleGenerateRoutine = async () => {
+    const savedId = await AsyncStorage.getItem("user_id");
+    const userId = parseInt(savedId, 10);
+    const newRoutineData = await generateRoutine(userId);
+    setWeeklyRoutineData(newRoutineData);
+  }
+  
   const settings = [
     {
       id: "1",
@@ -152,6 +158,13 @@ const HomeScreen = () => {
       action: () => console.log("Change Password"), // Implement password change logic
       IconFamily: 'MaterialIcons',
       IconName:'password',
+    },
+    {
+      id: "8",  // Add a new ID
+      title: "Generate Routine",
+      action: handleGenerateRoutine, // Call the generateRoutine function
+      IconFamily: "Ionicons", // Or the appropriate icon family
+      IconName: "refresh",   // Choose an appropriate icon name
     },
     { 
       id: "7", 
@@ -279,13 +292,15 @@ const HomeScreen = () => {
 
   useEffect(() => {
     const fetchRoutine = async () => {
-      try {
-        const data = await fetchUserRoutines();
-        setWeeklyRoutineData(data.routine_data);
-      } catch (error) {
-        console.error("Failed to fetch routine data", error);
-        // Handle error appropriately (e.g., display error message)
-      }
+    const data = await fetchUserRoutines();
+    if (data && data.routine_data) { // Check if data and routine_data exist
+      setWeeklyRoutineData(data.routine_data);
+      setRoutineLoadingError(false); // Reset error state if successful
+    } else {
+      setWeeklyRoutineData(null); // Explicitly set to null if no data
+      setRoutineLoadingError(true); // Set error state
+    }
+    // if data.error -> alert that user routine not found
     };
 
     fetchRoutine();
@@ -396,7 +411,9 @@ const HomeScreen = () => {
         <Icon name="menu-outline" size={30} color="black" />
       </TouchableOpacity>
       {isSidebarVisible && <Sidebar />}
-      <View style={{ height: 230, backgroundColor: "#f9f9f9" }}>
+
+      <ScrollView style={{ flex: 1 }}>
+      <View style={{ height: 230 }}>
         <View style={styles.header}>
           <Text style={styles.heading}>Routines</Text>
         </View>
@@ -433,53 +450,65 @@ const HomeScreen = () => {
           )}
         />
       </View>
-
-      <ScrollView style={{ flex: 1, backgroundColor: "#f9f9f9" }}>
-        <View style={styles.section}>
-          <View
-            style={[
-              styles.header,
-              {
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-              },
-            ]}
-          >
-            <TouchableOpacity onPress={() => changeDay(-1)}>
-              <Icon name="chevron-back-outline" size={24} color="#76c7c0" />
-            </TouchableOpacity>
-            <View style={{ alignItems: "center" }}>
-              <Text style={styles.heading}>{getSectionHeading()}</Text>
-              <Text style={styles.dateText}>{getCurrentDayText()}</Text>
-            </View>
-            <TouchableOpacity onPress={() => changeDay(1)}>
-              <Icon name="chevron-forward-outline" size={24} color="#76c7c0" />
+          { !weeklyRoutineData ? (
+            <View style={styles.noRoutineContainer}>
+            <Text style={styles.noRoutineText}>No routine found.</Text>
+            <TouchableOpacity 
+              style={styles.generateButton} 
+              onPress={handleGenerateRoutine}
+            >
+              <Text style={styles.generateButtonText}>Generate Routine</Text>
             </TouchableOpacity>
           </View>
-          {tasks.map((task) => (
-            <Swipeable
-              key={task.id}
-              renderRightActions={renderRightActions}
-              onSwipeableRightOpen={() => removeTask(task.id)}
+          ) :
+          (
+          <View style={styles.section}>
+            <View
+              style={[
+                styles.header,
+                {
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                },
+              ]}
             >
-              <View style={styles.taskItem}>
-                <View style={styles.taskAvatar}>
-                  <Text style={styles.taskEmoji}>{task.emoji}</Text>
-                </View>
-                <View style={styles.taskDetails}>
-                  <Text style={styles.taskName}>{task.name}</Text>
-                  <Text style={styles.taskTime}>{task.timeRange}</Text>
-                </View>
-                <Checkbox
-                  status={task.completed ? "checked" : "unchecked"}
-                  onPress={() => toggleTask(task.id)}
-                  color="#76c7c0"
-                />
+              <TouchableOpacity onPress={() => changeDay(-1)}>
+                <Icon name="chevron-back-outline" size={24} color="#76c7c0" />
+              </TouchableOpacity>
+              <View style={{ alignItems: "center" }}>
+                <Text style={styles.heading}>{getSectionHeading()}</Text>
+                <Text style={styles.dateText}>{getCurrentDayText()}</Text>
               </View>
-            </Swipeable>
-          ))}
-        </View>
+              <TouchableOpacity onPress={() => changeDay(1)}>
+                <Icon name="chevron-forward-outline" size={24} color="#76c7c0" />
+              </TouchableOpacity>
+            </View>
+            {tasks.map((task) => (
+              <Swipeable
+                key={task.id}
+                renderRightActions={renderRightActions}
+                onSwipeableRightOpen={() => removeTask(task.id)}
+              >
+                <View style={styles.taskItem}>
+                  <View style={styles.taskAvatar}>
+                    <Text style={styles.taskEmoji}>{task.emoji}</Text>
+                  </View>
+                  <View style={styles.taskDetails}>
+                    <Text style={styles.taskName}>{task.name}</Text>
+                    <Text style={styles.taskTime}>{task.timeRange}</Text>
+                  </View>
+                  <Checkbox
+                    status={task.completed ? "checked" : "unchecked"}
+                    onPress={() => toggleTask(task.id)}
+                    color="#76c7c0"
+                  />
+                </View>
+              </Swipeable>
+            ))}
+          </View>
+        )}
+
       </ScrollView>
     </View>
   );
@@ -488,6 +517,28 @@ const HomeScreen = () => {
 export default HomeScreen;
 
 const styles = StyleSheet.create({
+  noRoutineContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 16,
+  },
+  noRoutineText: {
+    fontSize: 16,
+    color: "#333",
+    marginBottom: 16,
+  },
+  generateButton: {
+    backgroundColor: "#76c7c0",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  generateButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
   container: {
     flex: 1,
     backgroundColor: "#f9f9f9",

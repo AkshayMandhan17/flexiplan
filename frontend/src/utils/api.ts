@@ -1,7 +1,7 @@
 import { API_BASE_URL } from "../config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Alert } from 'react-native'; // Import Alert
-import { TaskFormData, UserRoutineResponse } from "./model";
+import { RoutineData, TaskFormData, UserRoutineResponse } from "./model";
 import { FriendRequest } from "./model";
 
 // Helper function to get authentication headers
@@ -485,6 +485,33 @@ export const markMessagesAsRead = async (friendId: number) => {
   } catch (error: any) {
     console.error("Error marking messages as read:", error);
     Alert.alert("Error", error.message || "Failed to mark messages as read.");
+    throw error;
+  }
+};
+
+export const generateRoutine = async (userId: number) => {
+  try {
+    const accessToken = await AsyncStorage.getItem("access_token");
+    const response = await fetch(`${API_BASE_URL}/api/generate-routine/${userId}/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      const errorMessage = data.error || 'Failed to generate routine';
+      Alert.alert("Error", errorMessage);
+      return;
+    }
+
+    return data.routine as RoutineData;
+  } catch (error: any) {
+    console.error("Error generating routine:", error);
+    Alert.alert("Error", error.message || "Failed to generate routine.");
     throw error;
   }
 };

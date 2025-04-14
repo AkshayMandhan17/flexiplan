@@ -48,7 +48,8 @@ export interface RoutineData {
 }
 
 export interface UserRoutineResponse {
-  routine_data: RoutineData;
+  routine_data?: RoutineData;
+  error?: string;
 }
 
 export interface FriendRequest {

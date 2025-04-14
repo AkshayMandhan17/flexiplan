@@ -47,9 +47,10 @@ class UserRoutine(models.Model):
     routine = models.ForeignKey(Routine, on_delete=models.CASCADE, related_name="user_routines")
     shared_on = models.DateTimeField(auto_now_add=True)
     permission = models.CharField(max_length=10, choices=[('View', 'View'), ('Edit', 'Edit')])
+    is_primary = models.BooleanField(default=False)  # ← New field
 
     class Meta:
-        unique_together = ('user', 'routine')  # Prevent duplicate entries
+        unique_together = ('user', 'routine')
 
 class UserSetting(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="settings")
