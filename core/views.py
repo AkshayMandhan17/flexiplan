@@ -107,34 +107,22 @@ class UserTaskDetailView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class UserRoutineView(APIView):
-    authentication_classes = [JWTAuthentication]  # Enforce JWT authentication
-    permission_classes = [IsAuthenticated]  # Require authentication
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        """Returns the current week's routine for the logged-in user."""
+        """Returns the current primary routine for the logged-in user."""
         user = request.user
-        today = date.today()
-
-        # Calculate start and end of the current week (Monday to Sunday)
-        start_date = today - timedelta(days=today.weekday())  # Monday
-        end_date = start_date + timedelta(days=6)  # Sunday
 
         try:
-            # Find the routine for the current week
-            routine = Routine.objects.filter(
-                start_date__lte=end_date,  # Routine start date is before or on this week's end
-                end_date__gte=start_date   # Routine end date is after or on this week's start
-            ).first() # Assuming only one routine is active per week
+            # Get the current primary routine for the user
+            user_routine = UserRoutine.objects.select_related('routine').filter(user=user, is_primary=True).first()
 
-            if routine:
-                # Check if the routine is associated with the user using UserRoutine
-                user_routine = UserRoutine.objects.filter(user=user, routine=routine).exists()
-                if user_routine:
-                    return Response({"routine_data": routine.routine_data}, status=status.HTTP_200_OK)
-                else:
-                    return Response({"error": "No routine found for this user for the current week."}, status=status.HTTP_404_NOT_FOUND)
+            if user_routine and user_routine.routine:
+                return Response({"routine_data": user_routine.routine.routine_data}, status=status.HTTP_200_OK)
             else:
-                return Response({"error": "No routine found for the current week."}, status=status.HTTP_404_NOT_FOUND)
+                return Response({"error": "No primary routine found for this user."}, status=status.HTTP_404_NOT_FOUND)
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
