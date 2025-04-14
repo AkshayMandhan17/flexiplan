@@ -21,7 +21,7 @@ if GOOGLE_API_KEY is None:
     raise Exception("Set GOOGLE_API_KEY in your env")
 
 genai.configure(api_key=GOOGLE_API_KEY)
-model = genai.GenerativeModel('gemini-pro')
+model = genai.GenerativeModel('models/gemini-1.5-pro-latest')
 
 # Days of the week for validation and parsing
 daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
@@ -53,8 +53,8 @@ def parse_routine_text(routine_text):
     return routine_data
 
 class GenerateRoutineView(APIView):
-    authentication_classes = [JWTAuthentication]  # Enforce JWT authentication
-    permission_classes = [IsAuthenticated]  # Require authentication
+    # authentication_classes = [JWTAuthentication]  # Enforce JWT authentication
+    # permission_classes = [IsAuthenticated]  # Require authentication
 
     def post(self, request, user_id, *args, **kwargs):  # ✅ Take user_id as path parameter
 
