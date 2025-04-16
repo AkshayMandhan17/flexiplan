@@ -21,6 +21,8 @@ import { StackNavigationProp } from "@react-navigation/stack";
 interface Friend {
   id: number;
   name: string;
+  first_name: string;
+  last_name: string;
 }
 
 interface FriendsScreenState {
@@ -54,6 +56,7 @@ function ErrorView({ message, onRetry }: { message: string; onRetry: () => void 
 
 function FriendItem({ friend, onRemove, onPress }: { friend: Friend; onRemove: (id: number) => void; onPress: (friend: Friend) => void; }) {
     // const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+    console.log(friend);
   return (
     <TouchableOpacity onPress={() => onPress(friend)} style={styles.friendItem}>
       <Ionicons name="person-circle-outline" size={40} color="white" style={styles.friendIcon} />

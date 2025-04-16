@@ -29,6 +29,7 @@ const scaleSize = (size: number) => Math.round(size * scale);
 
 const SignupScreen = ({ navigation }: any) => {
   const { width, height } = useWindowDimensions();
+  const [fullName, setFullName] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [username, setUsername] = useState("");
@@ -96,7 +97,7 @@ const SignupScreen = ({ navigation }: any) => {
     >
       <ScrollView
         contentContainerStyle={{ flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
+        // keyboardShouldPersistTaps="handled"
       >
         <StatusBar barStyle={"light-content"} />
         <Image

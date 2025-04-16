@@ -83,7 +83,9 @@ class ListFriendsView(APIView):
         friend_list = [
             {
                 "id": friend.friend.id if friend.user == request.user else friend.user.id,
-                "username": friend.friend.username if friend.user == request.user else friend.user.username
+                "username": friend.friend.username if friend.user == request.user else friend.user.username,
+                "first_name": friend.friend.first_name if friend.user == request.user else friend.user.first_name,
+                "last_name": friend.friend.last_name if friend.user == request.user else friend.user.last_name
             }
             for friend in friends
         ]
