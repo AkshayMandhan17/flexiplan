@@ -1,194 +1,3 @@
-// import React, { useState, useEffect } from 'react';
-// import {
-//   View,
-//   Text,
-//   TextInput,
-//   TouchableOpacity,
-//   FlatList,
-//   Image,
-//   StyleSheet,
-// } from 'react-native';
-// import { RouteProp, useRoute } from '@react-navigation/native';
-// import { RootStackParamList } from '../../App';
-// import { fetchMessages } from "../utils/api"; // ✅ Import addUserTask service
-
-// type ChatScreenRouteProp = RouteProp<RootStackParamList, 'Chats'>;
-
-// const ChatScreen = () => {
-//   const route = useRoute<ChatScreenRouteProp>();
-//   const { friendId, friendName, friendAvatar } = route.params;
-//   const [messages, setMessages] = useState(null);
-//   const [newMessage, setNewMessage] = useState('');
-
-//   useEffect(() => {
-//     const loadMessages = async () => {
-//       try {
-//         const msgs = await fetchMessages(friendId);
-//         setMessages(msgs); // assuming msgs is an array
-//       } catch (err) {
-//         console.log('Failed to load messages', err);
-//       }
-//     };
-  
-//     loadMessages();
-//   }, [friendId]);
-
-//   const handleSendMessage = async () => {
-//     if (!newMessage.trim()) return;
-  
-//     try {
-//       await sendMessage(friendId, newMessage);
-//       setNewMessage('');
-  
-//       // Reload messages after sending
-//       const msgs = await fetchMessages(friendId);
-//       setMessages(msgs);
-//     } catch (err) {
-//       console.log("Error sending message", err);
-//     }
-//   };
-  
-
-
-//   return (
-//     <View style={styles.container}>
-//       {/* Header */}
-//       <View style={styles.header}>
-//         <Image source={{ uri: friendAvatar }} style={styles.avatar} />
-//         <Text style={styles.friendName}>{friendName}</Text>
-//         <TouchableOpacity>
-//           <Text style={styles.menuDots}>⋮</Text>
-//         </TouchableOpacity>
-//       </View>
-
-//       {/* Chat Messages */}
-//       <FlatList
-//         data={messages}
-//         keyExtractor={(item) => item.id}
-//         renderItem={({ item }) => (
-//           <View
-//             style={[
-//               styles.chatBubble,
-//               item.sender ? styles.senderBubble : styles.receiverBubble,
-//             ]}
-//           >
-//             <Text style={styles.messageText}>{item.text}</Text>
-//             <Text style={styles.messageTime}>{item.time}</Text>
-//           </View>
-//         )}
-//         contentContainerStyle={styles.chatContainer}
-//       />
-
-//       {/* Chat Input Bar */}
-//       <View style={styles.inputBar}>
-//         <TextInput
-//           style={styles.input}
-//           placeholder="Type a message..."
-//           value={newMessage}
-//           onChangeText={setNewMessage}
-//         />
-//         <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
-//           <Text style={styles.sendButtonText}>Send</Text>
-//         </TouchableOpacity>
-//       </View>
-//     </View>
-//   );
-// };
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     backgroundColor: '#fff',
-//   },
-//   header: {
-//     height: 60,
-//     backgroundColor: '#f5f5f5',
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     justifyContent: 'space-between',
-//     paddingHorizontal: 16,
-//     borderBottomWidth: 1,
-//     borderBottomColor: '#e0e0e0',
-//   },
-//   avatar: {
-//     width: 40,
-//     height: 40,
-//     borderRadius: 20,
-//   },
-//   friendName: {
-//     flex: 1,
-//     fontSize: 18,
-//     fontWeight: 'bold',
-//     marginLeft: 12,
-//   },
-//   menuDots: {
-//     fontSize: 20,
-//     color: '#888',
-//   },
-//   chatContainer: {
-//     flexGrow: 1,
-//     paddingHorizontal: 16,
-//     paddingVertical: 8,
-//   },
-//   chatBubble: {
-//     maxWidth: '75%',
-//     borderRadius: 12,
-//     padding: 12,
-//     marginBottom: 10,
-//   },
-//   senderBubble: {
-//     alignSelf: 'flex-end',
-//     backgroundColor: '#9dbfb6',
-//   },
-//   receiverBubble: {
-//     alignSelf: 'flex-start',
-//     backgroundColor: '#f0f0f0',
-//   },
-//   messageText: {
-//     fontSize: 16,
-//     color: '#333',
-//   },
-//   messageTime: {
-//     fontSize: 12,
-//     color: '#666',
-//     marginTop: 4,
-//     textAlign: 'right',
-//   },
-//   inputBar: {
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     paddingHorizontal: 16,
-//     paddingVertical: 8,
-//     borderTopWidth: 1,
-//     borderTopColor: '#e0e0e0',
-//     backgroundColor: '#f5f5f5',
-//   },
-//   input: {
-//     flex: 1,
-//     height: 40,
-//     borderRadius: 20,
-//     paddingHorizontal: 16,
-//     backgroundColor: '#fff',
-//     borderWidth: 1,
-//     borderColor: '#ccc',
-//   },
-//   sendButton: {
-//     marginLeft: 12,
-//     paddingVertical: 8,
-//     paddingHorizontal: 16,
-//     borderRadius: 20,
-//     backgroundColor: '#9dbfb6',
-//   },
-//   sendButtonText: {
-//     color: '#fff',
-//     fontSize: 16,
-//     fontWeight: 'bold',
-//   },
-// });
-
-// export default ChatScreen;
-
-
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -246,6 +55,34 @@ const ChatScreen = () => {
     const initChat = async () => {
       await loadMessages();
       await markMessagesAsRead(friendId);
+    };
+    initChat();
+  }, [friendId]);
+
+  useEffect(() => {
+    const initChat = async () => {
+      try {
+        // Fetch friend's details
+        const friendDetails = await fetchUserDetails(friendId);
+        setFriendName(`${friendDetails.first_name} ${friendDetails.last_name}`);
+        
+        // Fetch current user details
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${API_BASE_URL}/api/users/details/`, {
+          method: 'GET',
+          headers,
+        });
+        
+        if (response.ok) {
+          const userData = await response.json();
+          setCurrentUser(userData);
+        }
+        
+        await loadMessages();
+        await markMessagesAsRead(friendId);
+      } catch (error) {
+        console.error("Initialization error:", error);
+      }
     };
     initChat();
   }, [friendId]);

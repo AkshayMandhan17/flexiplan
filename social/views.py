@@ -10,6 +10,18 @@ from django.db import models
 # Serializer for the User model
 from core.serializers import UserSerializer, FriendshipSerializer
 
+class UserDetailAPIView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        """
+        Fetch the authenticated user's details
+        """
+        user = request.user
+        serializer = UserSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 class UsersView(APIView):
     authentication_classes = [JWTAuthentication]  # Enforce JWT authentication
     permission_classes = [IsAuthenticated]  # Require authentication

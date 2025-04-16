@@ -1,7 +1,7 @@
 import { API_BASE_URL } from "../config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Alert } from 'react-native'; // Import Alert
-import { RoutineData, TaskFormData, UserRoutineResponse } from "./model";
+import { RoutineData, TaskFormData, UserRoutineResponse, User} from "./model";
 import { FriendRequest } from "./model";
 
 // Helper function to get authentication headers
@@ -37,6 +37,27 @@ export const fetchHobbies = async () => {
   }
 };
 
+export const fetchUserDetails = async (): Promise<User> => {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/api/users/details/`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || `HTTP error! Status: ${response.status}`);
+    }
+
+    const data: User = await response.json();
+    return data;
+  } catch (error: any) {
+    console.error("Error fetching user details:", error);
+    Alert.alert("Error", error.message || "Failed to fetch user details.");
+    throw error;
+  }
+};
 
 export const fetchUsers = async () => {
     try {
@@ -335,9 +356,11 @@ export const fetchFriends = async () => {
     const data = await response.json();
 
     // Map API response to match the expected structure
-    return data.map((friend: { id: number; username: string }) => ({
+    return data.map((friend: { id: number; username: string, first_name: string, last_name: string }) => ({
       id: friend.id,
-      name: friend.username, // Rename username to name
+      name: friend.username,
+      first_name: friend.first_name,
+      last_name: friend.last_name
     }));
   } catch (error) {
     console.error("Error fetching friends:", error);
