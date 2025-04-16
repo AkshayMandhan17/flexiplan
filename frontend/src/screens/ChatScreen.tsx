@@ -13,6 +13,7 @@ import { RouteProp, useRoute } from '@react-navigation/native';
 import { RootStackParamList } from '../../App';
 import { fetchMessages, sendMessage as sendMessageAPI, markMessagesAsRead } from "../utils/api";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from "../config";
 
 type ChatScreenRouteProp = RouteProp<RootStackParamList, 'Chats'>;
 
@@ -23,6 +24,8 @@ const ChatScreen = () => {
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [username, setUsername] = useState<string>("");
+  const [currentUser, setCurrentUser] = useState();
+  
   
 
   const loadMessages = async () => {
@@ -59,14 +62,17 @@ const ChatScreen = () => {
     initChat();
   }, [friendId]);
 
+  const getAuthHeaders = async () => {
+    const accessToken = await AsyncStorage.getItem("access_token");
+    return {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    };
+  };
+
   useEffect(() => {
-    const initChat = async () => {
+    const FuncUserDetails = async () => {
       try {
-        // Fetch friend's details
-        const friendDetails = await fetchUserDetails(friendId);
-        setFriendName(`${friendDetails.first_name} ${friendDetails.last_name}`);
-        
-        // Fetch current user details
         const headers = await getAuthHeaders();
         const response = await fetch(`${API_BASE_URL}/api/users/details/`, {
           method: 'GET',
@@ -76,16 +82,14 @@ const ChatScreen = () => {
         if (response.ok) {
           const userData = await response.json();
           setCurrentUser(userData);
+          console.log(userData);
         }
-        
-        await loadMessages();
-        await markMessagesAsRead(friendId);
       } catch (error) {
         console.error("Initialization error:", error);
       }
     };
-    initChat();
-  }, [friendId]);
+    FuncUserDetails();
+  }, []);
 
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -120,7 +124,7 @@ const ChatScreen = () => {
       {/* Header */}
       <View style={styles.header}>
         <Image source={{ uri: friendAvatar }} style={styles.avatar} />
-        <Text style={styles.friendName}>{friendName}</Text>
+        <Text style={styles.friendName}>{currentUser.friendName}</Text>
         <TouchableOpacity>
           <Text style={styles.menuDots}>⋮</Text>
         </TouchableOpacity>
