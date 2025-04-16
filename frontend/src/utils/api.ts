@@ -89,14 +89,26 @@ export const fetchUsers = async () => {
     }
   };
 
-  export const signup = async (username: string, email: string, password: string) => {
+  export const signup = async (
+    firstName: string,
+    lastName: string,
+    username: string, 
+    email: string, 
+    password: string
+) => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/signup/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ username, email, password }),
+        body: JSON.stringify({
+          first_name: firstName,
+          last_name: lastName,
+          username, 
+          email, 
+          password,
+        }),
       });
   
       const data = await response.json();
@@ -105,12 +117,12 @@ export const fetchUsers = async () => {
         throw new Error(data.error || "Error!");
       }
   
-      return data; // Return singup response
+      return data; // Return signup response
     } catch (error) {
       console.error("Error during signup:", error);
       throw error;
     }
-  };
+};
 
   export const fetchUserHobbies = async (userId: number) => {
     try {
