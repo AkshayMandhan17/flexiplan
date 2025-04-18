@@ -10,6 +10,18 @@ from django.db import models
 # Serializer for the User model
 from core.serializers import UserSerializer, FriendshipSerializer
 
+class PublicUserDetailAPIView(APIView):
+    """
+    Fetch a user's public details by username
+    """
+    authentication_classes = []  # No auth
+    permission_classes = []      # No permission checks
+
+    def get(self, request, username, *args, **kwargs):
+        user = get_object_or_404(User, username=username)
+        serializer = UserSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 class UserDetailAPIView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]

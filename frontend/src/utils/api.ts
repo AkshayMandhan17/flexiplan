@@ -59,6 +59,26 @@ export const fetchUserDetails = async (): Promise<User> => {
   }
 };
 
+export const fetchPublicUserDetails = async (username: string): Promise<User> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/users/${username}/`, {
+      method: 'GET',
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || `HTTP error! Status: ${response.status}`);
+    }
+
+    const data: User = await response.json();
+    return data;
+  } catch (error: any) {
+    console.error("Error fetching public user details:", error);
+    Alert.alert("Error", error.message || "Failed to fetch user details.");
+    throw error;
+  }
+};
+
 export const fetchUsers = async () => {
     try {
       const accessToken = await AsyncStorage.getItem("access_token");
