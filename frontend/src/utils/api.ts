@@ -570,3 +570,30 @@ export const generateRoutine = async (userId: number) => {
     throw error;
   }
 };
+
+export const updateRoutine = async (userId: number) => {
+  try {
+    const accessToken = await AsyncStorage.getItem("access_token");
+    const response = await fetch(`${API_BASE_URL}/api/generate-routine/${userId}/`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      const errorMessage = data.error || 'Failed to update routine';
+      Alert.alert("Error", errorMessage);
+      return;
+    }
+
+    return data.routine as RoutineData;
+  } catch (error: any) {
+    console.error("Error updating routine:", error);
+    Alert.alert("Error", error.message || "Failed to update routine.");
+    throw error;
+  }
+};

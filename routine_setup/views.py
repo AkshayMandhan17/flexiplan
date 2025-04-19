@@ -53,8 +53,8 @@ def parse_routine_text(routine_text):
     return routine_data
 
 class GenerateRoutineView(APIView):
-    # authentication_classes = [JWTAuthentication]  # Enforce JWT authentication
-    # permission_classes = [IsAuthenticated]  # Require authentication
+    authentication_classes = [JWTAuthentication]  # Enforce JWT authentication
+    permission_classes = [IsAuthenticated]  # Require authentication
 
     def post(self, request, user_id, *args, **kwargs):  # ✅ Take user_id as path parameter
 
@@ -195,3 +195,71 @@ class GenerateRoutineView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    def put(self, request, user_id, *args, **kwargs):
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response({"error": f"User with ID {user_id} not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        today = date.today()
+        today_str = today.strftime("%A")
+
+        try:
+            current_routine = Routine.objects.get(
+                user_routines__user=user,
+                start_date__lte=today,
+                end_date__gte=today,
+                user_routines__is_primary=True
+            )
+        except Routine.DoesNotExist:
+            return Response({"error": "No active primary routine found."}, status=status.HTTP_404_NOT_FOUND)
+
+        user_hobbies_queryset = UserHobby.objects.filter(user=user).select_related('hobby')
+        user_hobbies = [{"name": user_hobby.hobby.name, "category": user_hobby.hobby.category} for user_hobby in user_hobbies_queryset]
+        user_settings = {
+            "day_start_time": "07:00:00",
+            "day_end_time": "21:00:00",
+        }
+
+        prompt = f"""
+           Today's date is {today.strftime('%Y-%m-%d')}. It is {today_str}.
+            Generate a fun and relaxing routine filled with the user's hobbies: {json.dumps(user_hobbies)}
+            and ample time for rest. The day should start no earlier than {user_settings['day_start_time']} and end no later than {user_settings['day_end_time']}.
+
+            **Output Format:**
+
+            Return the weekly routine as a human-readable TEXT, with each day clearly marked in **bold markdown** (e.g., **Monday**).  For each day, list the activities as markdown list items (*). Each activity line should follow this format:
+
+            Start Time - End Time: Activity Name (Activity Type) 
+            (e.g., * 07:00 - 08:00: Morning Yoga (Hobby)). 
+
+            Do NOT return JSON. Return plain TEXT in the format described above.
+
+            User Hobbies: {json.dumps(user_hobbies)}
+            User Settings: {json.dumps(user_settings)}
+        """
+
+        try:
+            response = model.generate_content(prompt)
+            if response.text:
+                try:
+                    off_day_routine = parse_routine_text(response.text)
+                    if today_str in off_day_routine and off_day_routine[today_str]:  # Check key presence and not empty
+                        current_routine.routine_data[today_str] = off_day_routine[today_str] # update routine for today
+                        current_routine.save()
+                        return Response({"routine": current_routine.routine_data}, status=status.HTTP_200_OK)  # Return the complete, updated routine.
+                    else:  # Handle Model not returning today_str.
+                        return Response({"error": f"The model did not return a routine for {today_str} or returned an empty routine. Raw response:\n{response.text}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                except Exception as parsing_error:
+                    return Response(
+                        {"error": "Failed to parse routine text.", "details": str(parsing_error), "raw_response": response.text},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+            else:
+                return Response({"error": "The model returned no text"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        except exceptions.GoogleAPIError as api_error:
+            return Response({"error": f"Gemini API Error: {str(api_error)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as general_error:
+            return Response({"error": str(general_error)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
