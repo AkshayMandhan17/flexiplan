@@ -98,7 +98,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'flexiplan',
         'USER': 'postgres',
-        'PASSWORD': 'postgres',
+        'PASSWORD': 'superuser@flexiplan',
         'HOST': 'localhost',
         'PORT': '5432',
     }
