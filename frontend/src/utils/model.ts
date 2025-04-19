@@ -10,6 +10,8 @@ export interface Hobby {
     id: number; // Unique identifier for each user
     username: string; // Username of the user
     email: string; // User's email address
+    first_name: string;
+    last_name: string;
   }
   
   export interface Task {
@@ -59,4 +61,6 @@ export interface FriendRequest {
   sender_username: string; // Username of the user who sent the request (as clarified)
   status: "Pending" | "Accepted" | "Rejected";
   created_at: string;  // ISO 8601 date string (e.g., "2025-02-22T16:15:27.898604Z")
+  first_name: string;
+  last_name: string;
 }

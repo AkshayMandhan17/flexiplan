@@ -8,10 +8,12 @@ class SignupSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password']
+        fields = ['first_name', 'last_name', 'username', 'email', 'password']
 
     def create(self, validated_data):
         user = User.objects.create_user(
+            first_name=validated_data.get('first_name', ''),
+            last_name=validated_data.get('last_name', ''),
             username=validated_data['username'],
             email=validated_data['email'],
             password=validated_data['password']
@@ -27,14 +29,16 @@ class LoginSerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email']  # Include necessary fields
+        fields = ['id', 'first_name', 'last_name', 'username', 'email']  # Include necessary fields
 
 class FriendshipSerializer(serializers.ModelSerializer):
     sender_username = serializers.CharField(source="user.username", read_only=True)
+    first_name = serializers.CharField(source="user.first_name", read_only=True)
+    last_name = serializers.CharField(source="user.last_name", read_only=True)
 
     class Meta:
         model = Friendship
-        fields = ['id', 'user', 'friend', 'sender_username', 'status', 'created_at']
+        fields = ['id', 'user', 'friend', 'sender_username', 'status', 'created_at', 'first_name', 'last_name']
 
 
 # Serializer for the Task model

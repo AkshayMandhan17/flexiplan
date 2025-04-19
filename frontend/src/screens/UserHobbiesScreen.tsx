@@ -109,7 +109,7 @@ const UserHobbiesScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>{username ? `${username}'s Hobbies` : "User Hobbies"}</Text>
+        <Text style={styles.title}>{username ? `Your Hobbies` : "User Hobbies"}</Text>
         <Text style={styles.subtitle}>Here is a list of your hobbies.</Text>
       </View>
       <FlatList

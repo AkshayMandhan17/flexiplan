@@ -126,7 +126,7 @@ const UserTasksScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>{username ? `${username}'s Tasks` : "User Tasks"}</Text>
+        <Text style={styles.title}>{username ? `Your Tasks` : "User Tasks"}</Text>
         <Text style={styles.subtitle}>Here is a list of your tasks.</Text>
         <TouchableOpacity // ✅ Add Task Button in Header
           style={styles.addButton}

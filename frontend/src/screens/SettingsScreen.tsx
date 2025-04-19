@@ -18,6 +18,12 @@ import UserTasksScreen from "./UserTasksScreen"; // Make sure this path is corre
 import LottieView from "lottie-react-native";
 import FriendsScreen from "./FriendsScreen"; // Make sure this path is correct
 import Login from "./LoginScreen"; // Make sure this path is correct
+import { fetchPublicUserDetails } from "../utils/api";
+
+import { Image, ScrollView, Modal } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import { LinearGradient } from "expo-linear-gradient";
+import { MaterialIcons } from "@expo/vector-icons"; // For camera and gallery icons
 
 const SettingsStack = createStackNavigator();
 
@@ -34,12 +40,75 @@ type SettingsScreenContentNavigationProp = NavigationProp<
   "SettingsContent"
 >;
 
+type User = {
+  id: number;
+  username: string;
+  first_name: string;
+  last_name: string;
+};
+
 // This is your main Settings screen component
 const SettingsScreen = () => {
+  const [profilePic, setProfilePic] = useState<string | null>(null);
+  const [showPopup, setShowPopup] = useState(false); // To control popup visibility
+
   const navigation = useNavigation<SettingsScreenContentNavigationProp>();
   const [username, setUsername] = useState<string>("");
   const [isOffDay, setIsOffDay] = useState(false);
   const { setIsLoggedIn } = useAuth(); // Get setIsLoggedIn from AuthContext
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  const handleChooseImage = async () => {
+    try {
+      const permissionResult =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert(
+          "Permission required",
+          "You need to allow access to your photos."
+        );
+        return;
+      }
+      const pickerResult = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+      });
+      if (!pickerResult.canceled) {
+        const newProfilePic = pickerResult.assets[0].uri;
+        setProfilePic(newProfilePic);
+      }
+    } catch (error) {
+      console.error("Error picking image:", error);
+    }
+  };
+
+  const handleTakePhoto = async () => {
+    try {
+      const permissionResult =
+        await ImagePicker.requestCameraPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert(
+          "Permission required",
+          "You need to allow access to your camera."
+        );
+        return;
+      }
+      const cameraResult = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+      });
+      if (!cameraResult.canceled) {
+        const newProfilePic = cameraResult.assets[0].uri;
+        setProfilePic(newProfilePic);
+      }
+    } catch (error) {
+      console.error("Error taking photo:", error);
+    }
+  };
 
   const handleLogout = async () => {
     Alert.alert(
@@ -116,6 +185,8 @@ const SettingsScreen = () => {
         const savedUsername = await AsyncStorage.getItem("user_username");
         if (savedUsername) {
           setUsername(savedUsername);
+          const userDetails = await fetchPublicUserDetails(savedUsername);
+          setCurrentUser(userDetails);
         }
       } catch (error) {
         console.error("Failed to fetch username from AsyncStorage:", error);
@@ -129,17 +200,50 @@ const SettingsScreen = () => {
     <View style={styles.container}>
       <View style={styles.profileSection}>
         <View style={styles.profileImageWrapper}>
-          <LottieView
-            source={require("../../lotties/User.json")} //  Double-check this path!
-            autoPlay
-            loop
-            style={styles.lottie}
-          />
-          <TouchableOpacity style={styles.editIcon}>
-            <Text style={styles.editText}>✏️</Text>
-          </TouchableOpacity>
+          <View>
+            <Image
+              source={
+                profilePic
+                  ? { uri: profilePic }
+                  : require("../../assets/app-icon.png")
+              }
+              style={{
+                width: 120,
+                height: 120,
+                borderRadius: 60,
+                borderWidth: 3,
+                borderColor: "white",
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 5,
+              }}
+            />
+            <TouchableOpacity
+              style={{
+                position: "absolute",
+                bottom: 0,
+                right: 0,
+                backgroundColor: "#FFCC00",
+                borderRadius: 15,
+                padding: 5,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 5,
+                elevation: 10,
+              }}
+              onPress={() => setShowPopup(true)}
+            >
+              <Ionicons name="camera" size={25} color="white" />
+            </TouchableOpacity>
+          </View>
         </View>
-        <Text style={styles.username}>{username || "Loading..."}</Text>
+        <Text style={styles.username}>
+          {currentUser
+            ? `${currentUser.first_name} ${currentUser.last_name}`
+            : "Loading..."}
+        </Text>
       </View>
 
       <FlatList
@@ -163,6 +267,35 @@ const SettingsScreen = () => {
           </TouchableOpacity>
         )}
       />
+      <Modal
+        visible={showPopup}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowPopup(false)}
+      >
+        <View style={styles.popupContainer}>
+          <TouchableOpacity
+            style={styles.popupOption}
+            onPress={() => {
+              handleTakePhoto();
+              setShowPopup(false);
+            }}
+          >
+            <Ionicons name="camera" size={30} color="white" />
+            <Text style={styles.popupText}>Take Photo</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.popupOption}
+            onPress={() => {
+              handleChooseImage();
+              setShowPopup(false);
+            }}
+          >
+            <Ionicons name="image" size={30} color="white" />
+            <Text style={styles.popupText}>Choose from Gallery</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -251,6 +384,28 @@ const styles = StyleSheet.create({
   settingTitle: {
     fontSize: 16,
     color: "#333",
+  },
+  popupContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  popupOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFCC00",
+    padding: 15,
+    borderRadius: 10,
+    marginVertical: 10,
+    width: 250,
+    justifyContent: "center",
+  },
+  popupText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 16,
+    marginLeft: 10,
   },
 });
 

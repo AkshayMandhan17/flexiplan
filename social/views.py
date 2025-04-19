@@ -10,6 +10,30 @@ from django.db import models
 # Serializer for the User model
 from core.serializers import UserSerializer, FriendshipSerializer
 
+class PublicUserDetailAPIView(APIView):
+    """
+    Fetch a user's public details by username
+    """
+    authentication_classes = []  # No auth
+    permission_classes = []      # No permission checks
+
+    def get(self, request, username, *args, **kwargs):
+        user = get_object_or_404(User, username=username)
+        serializer = UserSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class UserDetailAPIView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        """
+        Fetch the authenticated user's details
+        """
+        user = request.user
+        serializer = UserSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 class UsersView(APIView):
     authentication_classes = [JWTAuthentication]  # Enforce JWT authentication
     permission_classes = [IsAuthenticated]  # Require authentication
@@ -83,7 +107,9 @@ class ListFriendsView(APIView):
         friend_list = [
             {
                 "id": friend.friend.id if friend.user == request.user else friend.user.id,
-                "username": friend.friend.username if friend.user == request.user else friend.user.username
+                "username": friend.friend.username if friend.user == request.user else friend.user.username,
+                "first_name": friend.friend.first_name if friend.user == request.user else friend.user.first_name,
+                "last_name": friend.friend.last_name if friend.user == request.user else friend.user.last_name
             }
             for friend in friends
         ]
