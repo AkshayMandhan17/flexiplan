@@ -42,7 +42,7 @@ export type RootStackParamList = {
 };
 
 export type SocialStackParamList = {
-  Social: undefined; // This corresponds to the main SocialScreen
+  SocialHome: undefined; // This corresponds to the main SocialScreen
   FriendRequests: undefined;
   FriendsScreen: undefined;
 };
@@ -55,7 +55,7 @@ const SocialStack = createStackNavigator<SocialStackParamList>();
 function SocialStackNavigator() {
   return (
     <SocialStack.Navigator screenOptions={{ headerShown: false }}>
-      <SocialStack.Screen name="Social" component={SocialScreen} />
+      <SocialStack.Screen name="SocialHome" component={SocialScreen} />
       <SocialStack.Screen name="FriendRequests" component={FriendRequestsScreen} />
       <SocialStack.Screen name="FriendsScreen" component={FriendsScreen} />
     </SocialStack.Navigator>
