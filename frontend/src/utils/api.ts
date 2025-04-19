@@ -61,10 +61,10 @@ export const fetchUserDetails = async (): Promise<User> => {
 
 export const fetchPublicUserDetails = async (username: string): Promise<User> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/users/${username}/`, {
+    const response = await fetch(`${API_BASE_URL}/api/users/${username}/`, {
       method: 'GET',
     });
-
+    
     if (!response.ok) {
       const data = await response.json();
       throw new Error(data.error || `HTTP error! Status: ${response.status}`);

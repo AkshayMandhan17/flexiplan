@@ -15,6 +15,7 @@ import {
   sendFriendRequest,
   fetchFriendRequests,
   respondToFriendRequest,
+  fetchPublicUserDetails,
 } from '../utils/api';
 import { User, FriendRequest } from '../utils/model';
 import { useIsFocused } from '@react-navigation/native';
@@ -159,12 +160,13 @@ const SocialTab = ({ navigation }: any) => {
       <FlatList
         data={friendRequests}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <View style={styles.listItem}>
+        renderItem={({ item }) => {
+          return (
+            <View style={styles.listItem}>
             <Image source={{ uri: 'https://via.placeholder.com/50' }} style={styles.avatar} />
 
             <View style={styles.textContainer}>
-              <Text style={styles.name}>{item.sender_username}</Text>
+              <Text style={styles.name}>{item.first_name} {item.last_name}</Text>
               <Text style={styles.lastMessage}>{item.status}</Text>
             </View>
 
@@ -186,7 +188,8 @@ const SocialTab = ({ navigation }: any) => {
               </View>
             )}
           </View>
-        )}
+          );
+        }}
         contentContainerStyle={styles.listContainer}
       />
     </>

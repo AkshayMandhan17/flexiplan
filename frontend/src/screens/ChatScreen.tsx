@@ -11,11 +11,18 @@ import {
 } from 'react-native';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import { RootStackParamList } from '../../App';
-import { fetchMessages, sendMessage as sendMessageAPI, markMessagesAsRead } from "../utils/api";
+import { fetchMessages, sendMessage as sendMessageAPI, markMessagesAsRead, fetchPublicUserDetails } from "../utils/api";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from "../config";
 
 type ChatScreenRouteProp = RouteProp<RootStackParamList, 'Chats'>;
+
+type User = {
+  id: number;
+  username: string;
+  first_name: string;
+  last_name: string;
+};
 
 const ChatScreen = () => {
   const route = useRoute<ChatScreenRouteProp>();
@@ -24,7 +31,7 @@ const ChatScreen = () => {
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [username, setUsername] = useState<string>("");
-  const [currentUser, setCurrentUser] = useState();
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   
   
 
@@ -62,35 +69,6 @@ const ChatScreen = () => {
     initChat();
   }, [friendId]);
 
-  const getAuthHeaders = async () => {
-    const accessToken = await AsyncStorage.getItem("access_token");
-    return {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    };
-  };
-
-  useEffect(() => {
-    const FuncUserDetails = async () => {
-      try {
-        const headers = await getAuthHeaders();
-        const response = await fetch(`${API_BASE_URL}/api/users/details/`, {
-          method: 'GET',
-          headers,
-        });
-        
-        if (response.ok) {
-          const userData = await response.json();
-          setCurrentUser(userData);
-          console.log(userData);
-        }
-      } catch (error) {
-        console.error("Initialization error:", error);
-      }
-    };
-    FuncUserDetails();
-  }, []);
-
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
     let hours = date.getHours();
@@ -108,11 +86,13 @@ const ChatScreen = () => {
     const fetchUserDetails = async () => {
       try {
         const savedUsername = await AsyncStorage.getItem("user_username");
-        if (savedUsername) {
+                if (savedUsername) {
           setUsername(savedUsername);
+          const userDetails = await fetchPublicUserDetails(friendName);
+          setCurrentUser(userDetails);
         }
       } catch (error) {
-        console.error("Failed to fetch username from AsyncStorage:", error);
+        console.error("Failed to fetch username or user details:", error);
       }
     };
 
@@ -124,7 +104,7 @@ const ChatScreen = () => {
       {/* Header */}
       <View style={styles.header}>
         <Image source={{ uri: friendAvatar }} style={styles.avatar} />
-        <Text style={styles.friendName}>{currentUser.friendName}</Text>
+        <Text style={styles.friendName}>{currentUser?.first_name} {currentUser?.last_name}</Text>
         <TouchableOpacity>
           <Text style={styles.menuDots}>⋮</Text>
         </TouchableOpacity>
