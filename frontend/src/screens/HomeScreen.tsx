@@ -25,7 +25,7 @@ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import AsyncStorage from "@react-native-async-storage/async-storage"; // Import AsyncStorage
 import { Dimensions } from "react-native";
 import { RoutineData, UserRoutineResponse } from "../utils/model";
-import { fetchUserRoutines, generateRoutine } from "../utils/api";
+import { fetchUserRoutines, generateRoutine, updateRoutine } from "../utils/api";
 import { createStackNavigator } from "@react-navigation/stack";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
 import { useAuth } from "../components/AuthContext"; // Make sure this path is correct
@@ -116,7 +116,7 @@ const HomeScreen = () => {
       console.log("No user_id found in AsyncStorage");
       return; // or handle accordingly
     }
-    
+    setIsOffDay(false);
     const userId = parseInt(savedId, 10);
     const newRoutineData = await generateRoutine(userId);
     if (newRoutineData === undefined) {
@@ -200,6 +200,35 @@ const HomeScreen = () => {
     fetchUserDetails();
   }, []);
 
+  const handleOffDayToggle = async () => {
+    const savedId = await AsyncStorage.getItem("user_id");
+    if (savedId === null) {
+      console.log("No user_id found in AsyncStorage");
+      return; // or handle accordingly
+    }
+    
+    const userId = parseInt(savedId, 10);
+    try {
+      if (!userId) {
+        Alert.alert("Error", "User ID not available.");
+        return;
+      }
+      setIsOffDay(!isOffDay);
+      if(!isOffDay)
+      {
+        const updatedRoutine = await updateRoutine(userId);
+
+        if (updatedRoutine) {
+          setWeeklyRoutineData(updatedRoutine);
+        }
+      }
+    } catch (error: any) {
+      console.error("Error toggling off-day:", error);
+      Alert.alert("Error", error.message || "Failed to toggle off-day.");
+      // Optionally reset the toggle switch if the API call fails:
+      setIsOffDay(false); 
+    }
+  };
   const toggleSidebar = () => {
     if (isSidebarVisible) {
       Animated.timing(sidebarAnimation, {
@@ -286,7 +315,7 @@ const HomeScreen = () => {
           </Text>
           <Switch
             value={isOffDay}
-            onValueChange={setIsOffDay} // simplified callback
+            onValueChange={handleOffDayToggle} // simplified callback
             thumbColor={isOffDay ? "#4CAF90" : "#f5f5f5"}
             trackColor={{
               false: "#e0e0e0",
