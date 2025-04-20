@@ -597,3 +597,37 @@ export const updateRoutine = async (userId: number) => {
     throw error;
   }
 };
+
+// Upload user profile picture
+export const uploadUserPfp = async (profilePicture: string) => {
+  try {
+    // Get authentication headers
+    const headers = await getAuthHeaders();
+
+    // Make API request to upload profile picture
+    const response = await fetch(`${API_BASE_URL}/api/upload-pfp/`, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({
+        profile_picture: profilePicture,  // Send the profile picture as a string (URL or base64)
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      const errorMessage = data.error || "Failed to upload profile picture";
+      Alert.alert("Error", errorMessage);
+      return;
+    }
+
+    // Handle success response (optional)
+    Alert.alert("Success", "Profile picture uploaded successfully!");
+    return data; // Return the response (e.g., updated user data)
+  } catch (error) {
+    console.error("Error uploading profile picture:", error);
+    const errorMessage = (error as any).message || "Failed to upload profile picture.";
+    Alert.alert("Error", errorMessage);
+    throw error;
+  }
+};

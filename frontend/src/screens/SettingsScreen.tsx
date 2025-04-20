@@ -24,6 +24,7 @@ import { Image, ScrollView, Modal } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialIcons } from "@expo/vector-icons"; // For camera and gallery icons
+import { uploadUserPfp } from "../utils/api"; // Import the uploadUserPfp API
 
 const SettingsStack = createStackNavigator();
 
@@ -31,7 +32,7 @@ type RootStackParamList = {
   SettingsContent: undefined;
   UserHobbies: undefined;
   UserTasks: undefined;
-  Login: undefined; //  Important if you navigate to Login on logout
+  Login: undefined; // Important if you navigate to Login on logout
   FriendsScreen: undefined;
 };
 
@@ -45,6 +46,7 @@ type User = {
   username: string;
   first_name: string;
   last_name: string;
+  profile_picture: string | null;
 };
 
 // This is your main Settings screen component
@@ -78,6 +80,8 @@ const SettingsScreen = () => {
       if (!pickerResult.canceled) {
         const newProfilePic = pickerResult.assets[0].uri;
         setProfilePic(newProfilePic);
+        // Call the API to upload the profile picture
+        await uploadUserPfp(newProfilePic); // Upload the profile picture
       }
     } catch (error) {
       console.error("Error picking image:", error);
@@ -104,6 +108,8 @@ const SettingsScreen = () => {
       if (!cameraResult.canceled) {
         const newProfilePic = cameraResult.assets[0].uri;
         setProfilePic(newProfilePic);
+        // Call the API to upload the profile picture
+        await uploadUserPfp(newProfilePic); // Upload the profile picture
       }
     } catch (error) {
       console.error("Error taking photo:", error);
@@ -186,7 +192,9 @@ const SettingsScreen = () => {
         if (savedUsername) {
           setUsername(savedUsername);
           const userDetails = await fetchPublicUserDetails(savedUsername);
+          //console.log(userDetails);
           setCurrentUser(userDetails);
+          setProfilePic(userDetails.profile_picture);
         }
       } catch (error) {
         console.error("Failed to fetch username from AsyncStorage:", error);
@@ -205,7 +213,7 @@ const SettingsScreen = () => {
               source={
                 profilePic
                   ? { uri: profilePic }
-                  : require("../../assets/app-icon.png")
+                  : require("../../assets/default_user.jpg")
               }
               style={{
                 width: 120,
@@ -324,7 +332,6 @@ const SettingsStackScreen = () => {
         component={FriendsScreen}
         options={{ title: "Friends" }}
       />
-      {/* Add other screens related to settings here */}
     </SettingsStack.Navigator>
   );
 };
@@ -341,24 +348,7 @@ const styles = StyleSheet.create({
   },
   profileImageWrapper: {
     position: "relative",
-    alignItems: "center", // Center the LottieView
-  },
-  lottie: {
-    width: 150,
-    height: 150,
-  },
-  editIcon: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 4,
-    elevation: 4, // Add a shadow on Android
-  },
-  editText: {
-    fontSize: 12,
-    color: "#333",
+    alignItems: "center",
   },
   username: {
     fontSize: 18,
@@ -409,4 +399,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SettingsStackScreen; // Export the Stack Navigator!
+export default SettingsStackScreen;

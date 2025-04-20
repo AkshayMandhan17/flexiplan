@@ -82,7 +82,7 @@ const SignupScreen = ({ navigation }: any) => {
     try {
       const response = await signup(firstName, lastName, username, email, password);
       if (response) {
-        navigation.navigate("Login");
+        () => navigation.navigate("Login");
       }
     } catch (error) {
       Alert.alert("Error", "Failed to connect to the server.");

@@ -126,3 +126,20 @@ class UserRoutineView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class UploadUserPfp(APIView):
+    authentication_classes = [JWTAuthentication]  # Ensure the user is authenticated
+    permission_classes = [IsAuthenticated]  # Only authenticated users can upload a profile picture
+
+    def put(self, request):
+        """Upload a new profile picture (as a URL or base64 string) for the user."""
+        user = request.user  # Get the currently authenticated user
+        profile_picture = request.data.get('profile_picture')
+
+        if not profile_picture:
+            return Response({"error": "No profile picture provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Update the user's profile picture with the provided string (URL or base64)
+        user.profile_picture = profile_picture
+        user.save()
+
+        return Response({"message": "Profile picture uploaded successfully!"}, status=status.HTTP_200_OK)

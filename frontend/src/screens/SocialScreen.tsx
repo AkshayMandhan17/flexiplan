@@ -123,9 +123,18 @@ const SocialTab = ({ navigation }: any) => {
       <FlatList
         data={filteredUsers}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <View style={styles.listItem}>
-            <Image source={{ uri: 'https://via.placeholder.com/50' }} style={styles.avatar} />
+        renderItem={({ item }) => {
+          //console.log(item);
+          return(
+            <View style={styles.listItem}>
+            <Image
+                source={
+                  item.profile_picture
+                    ? { uri: item.profile_picture }
+                    : require("../../assets/default_user.jpg")
+                }
+                style={styles.avatar}
+              />
 
             <View style={styles.textContainer}>
               <Text style={styles.name}>{item.first_name} {item.last_name}</Text>
@@ -145,7 +154,8 @@ const SocialTab = ({ navigation }: any) => {
               </Text>
             </TouchableOpacity>
           </View>
-        )}
+          );
+        }}
         contentContainerStyle={styles.listContainer}
       />
     </>

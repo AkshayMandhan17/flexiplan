@@ -12,6 +12,7 @@ export interface Hobby {
     email: string; // User's email address
     first_name: string;
     last_name: string;
+    profile_picture: string | null;
   }
   
   export interface Task {

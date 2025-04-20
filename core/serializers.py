@@ -29,7 +29,7 @@ class LoginSerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'last_name', 'username', 'email']  # Include necessary fields
+        fields = ['id', 'first_name', 'last_name', 'username', 'email', 'profile_picture']  # Include necessary fields
 
 class FriendshipSerializer(serializers.ModelSerializer):
     sender_username = serializers.CharField(source="user.username", read_only=True)
@@ -54,3 +54,8 @@ class MessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Message
         fields = ['id', 'sender', 'receiver', 'message', 'timestamp', 'is_read']
+
+class ProfilePictureSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['profile_picture']
