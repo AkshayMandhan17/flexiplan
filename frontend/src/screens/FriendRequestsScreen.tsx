@@ -34,7 +34,7 @@ const FriendRequestItem = (props: FriendRequestItemProps) => {
     return <Text>Sender information not found.</Text>;
   }
 
-  console.log(sender)
+  console.log(sender);
 
   return (
     <View style={styles.friendRequestItem}>

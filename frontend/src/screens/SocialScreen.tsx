@@ -60,7 +60,7 @@ const SocialTab = ({ navigation }: any) => {
       try {
         const data = await fetchFriendRequests();
         setFriendRequests(data);
-        // console.log(data);
+        console.log(data);
       } catch (error) {
         console.error('Failed to load friend requests:', error);
       }
@@ -171,9 +171,18 @@ const SocialTab = ({ navigation }: any) => {
         data={friendRequests}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => {
+          console.log(item);
           return (
             <View style={styles.listItem}>
-            <Image source={{ uri: 'https://via.placeholder.com/50' }} style={styles.avatar} />
+              {/* <Image
+                      source={
+                        item.profile_picture
+                          ? { uri: item.profile_picture }
+                          : require("../../assets/default_user.jpg")
+                      }
+                      style={styles.avatar}
+                    /> */}
+            {/* <Image source={{ uri: 'https://via.placeholder.com/50' }} style={styles.avatar} /> */}
 
             <View style={styles.textContainer}>
               <Text style={styles.name}>{item.first_name} {item.last_name}</Text>

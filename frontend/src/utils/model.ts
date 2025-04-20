@@ -64,4 +64,5 @@ export interface FriendRequest {
   created_at: string;  // ISO 8601 date string (e.g., "2025-02-22T16:15:27.898604Z")
   first_name: string;
   last_name: string;
+  profile_picture: string | null;
 }
