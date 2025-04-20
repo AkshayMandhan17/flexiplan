@@ -36,14 +36,14 @@ const FriendRequestItem = (props: FriendRequestItemProps) => {
 
   return (
     <View style={styles.friendRequestItem}>
-      {/* <Image
+      <Image
         source={
           sender.profile_picture
             ? { uri: sender.profile_picture }
             : require("../../assets/default_user.jpg")
         }
         style={styles.profilePicture}
-      /> */}
+      />
       <View style={styles.requestDetails}>
         <Text style={styles.username}>{item.sender_username}</Text>
         <Text style={styles.displayName}>

@@ -171,7 +171,7 @@ const SocialTab = ({ navigation }: any) => {
         data={friendRequests}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => {
-         //console.log(item);
+        //  console.log(item);
           return (
             <View style={styles.listItem}>
               <Image

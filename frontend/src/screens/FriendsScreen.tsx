@@ -9,6 +9,7 @@ import {
   ListRenderItem,
   TouchableOpacity,
   Alert,
+  Image,
 } from "react-native";
 import { fetchFriends, removeFriend } from "../utils/api";
 import { Ionicons } from "@expo/vector-icons";
@@ -178,7 +179,7 @@ function FriendsScreen() {
       navigation.navigate("Chats", {
         friendId: friend.id,
         friendName: friend.name,
-        friendAvatar: `https://api.dicebear.com/7.x/initials/svg?seed=${friend.name}`,
+        friendAvatar: friend.profile_picture,
       });
     },
     [navigation]
@@ -330,6 +331,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  avatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 16,
   },
 });
 

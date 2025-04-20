@@ -103,7 +103,15 @@ const ChatScreen = () => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Image source={{ uri: friendAvatar }} style={styles.avatar} />
+        <Image
+                source={
+                    friendAvatar
+                    ? { uri: friendAvatar }
+                    : require("../../assets/default_user.jpg")
+                }
+                style={styles.profilePicture}
+              />
+        {/* <Image source={{ uri: friendAvatar }} style={styles.avatar} /> */}
         <Text style={styles.friendName}>{currentUser?.first_name} {currentUser?.last_name}</Text>
         <TouchableOpacity>
           <Text style={styles.menuDots}>⋮</Text>
@@ -234,6 +242,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  profilePicture: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 15,
   },
 });
 
