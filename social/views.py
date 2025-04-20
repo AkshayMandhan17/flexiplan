@@ -109,7 +109,8 @@ class ListFriendsView(APIView):
                 "id": friend.friend.id if friend.user == request.user else friend.user.id,
                 "username": friend.friend.username if friend.user == request.user else friend.user.username,
                 "first_name": friend.friend.first_name if friend.user == request.user else friend.user.first_name,
-                "last_name": friend.friend.last_name if friend.user == request.user else friend.user.last_name
+                "last_name": friend.friend.last_name if friend.user == request.user else friend.user.last_name,
+                "profile_picture": friend.friend.profile_picture if friend.user == request.user else friend.user.profile_picture
             }
             for friend in friends
         ]

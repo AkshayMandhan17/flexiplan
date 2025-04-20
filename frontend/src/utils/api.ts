@@ -376,11 +376,12 @@ export const fetchFriends = async () => {
     const data = await response.json();
 
     // Map API response to match the expected structure
-    return data.map((friend: { id: number; username: string, first_name: string, last_name: string }) => ({
+    return data.map((friend: { id: number; username: string, first_name: string, last_name: string, profile_picture: string }) => ({
       id: friend.id,
       name: friend.username,
       first_name: friend.first_name,
-      last_name: friend.last_name
+      last_name: friend.last_name,
+      profile_picture: friend.profile_picture
     }));
   } catch (error) {
     console.error("Error fetching friends:", error);
