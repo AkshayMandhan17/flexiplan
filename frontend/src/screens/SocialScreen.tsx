@@ -144,12 +144,12 @@ const SocialTab = ({ navigation }: any) => {
             <TouchableOpacity
               style={[
                 styles.addButton,
-                { backgroundColor: friendshipStatuses[item.id] === 'Pending' ? '#ccc' : '#9dbfb6' },
+                { backgroundColor: friendshipStatuses[item.id] === 'Pending' ? 'rgba(40, 29, 17, 0.9)' : 'rgba(197, 110, 50, 0.9)' },
               ]}
               onPress={() => handleSendRequest(item.id)}
               disabled={friendshipStatuses[item.id] === 'Pending'}
             >
-              <Text style={{ color: '#FFF' }}>
+              <Text style={{ color: '#FFF', textAlign:'center' }}>
                 {friendshipStatuses[item.id] === 'Pending' ? 'Pending' : 'Add'}
               </Text>
             </TouchableOpacity>
@@ -244,18 +244,18 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#333',
+    backgroundColor: 'rgba(197, 110, 50, 0.7)',
   },
   activeTab: {
     flex: 1,
     paddingVertical: 12,
-    backgroundColor: '#444',
+    backgroundColor: 'rgba(197, 110, 50, 0.9)',
     alignItems: 'center',
   },
   inactiveTab: {
     flex: 1,
     paddingVertical: 12,
-    backgroundColor: '#222',
+    backgroundColor: 'rgba(180, 110, 40, 0.4)',
     alignItems: 'center',
   },
   tabText: {
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
   },
   topSection: {
     height: '20%',
-    backgroundColor: '#333',
+    backgroundColor: 'rgba(197, 110, 50, 0.9)',
     justifyContent: 'center',
     paddingHorizontal: 16,
   },
@@ -313,8 +313,9 @@ const styles = StyleSheet.create({
   },
   addButton: {
     paddingVertical: 6,
-    paddingHorizontal: 12,
+    // paddingHorizontal: 30,
     borderRadius: 16,
+    width:100,
   },
   actionsContainer: {
     flexDirection: 'row',

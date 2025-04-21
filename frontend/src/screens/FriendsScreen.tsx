@@ -10,12 +10,15 @@ import {
   TouchableOpacity,
   Alert,
   Image,
+  Animated,
+  Easing,
 } from "react-native";
 import { fetchFriends, removeFriend } from "../utils/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { RootStackParamList } from "../../App";
 import { StackNavigationProp } from "@react-navigation/stack";
+import * as Animatable from "react-native-animatable";
 
 // Types
 interface Friend {
@@ -33,74 +36,86 @@ interface FriendsScreenState {
   error: string | null;
 }
 
+// Constants
+const PRIMARY_COLOR = "rgba(197, 110, 50, 0.9)";
+const LIGHT_PRIMARY_COLOR = "rgba(197, 110, 50, 0.2)";
+const TEXT_ON_PRIMARY = "#FFFFFF";
+const TEXT_SECONDARY = "#333333";
+const ERROR_COLOR = "#FF4D4D";
+const DISABLED_COLOR = "#888888";
+
 // Components
 function EmptyState() {
   return (
-    <View style={styles.emptyState}>
-      <Ionicons name="people-outline" size={60} color="#00aaff" />
-      <Text style={styles.emptyStateText}>No friends found</Text>
-      <Text style={styles.emptyStateSubtext}>
-        Pull to refresh and try again
+    <View style={enhancedStyles.emptyState}>
+      <Animatable.View animation="pulse" easing="ease-out" iterationCount="infinite">
+        <Ionicons name="people-outline" size={70} color={PRIMARY_COLOR} />
+      </Animatable.View>
+      <Text style={enhancedStyles.emptyStateText}>No connections found</Text>
+      <Text style={enhancedStyles.emptyStateSubtext}>
+        Pull down to refresh and discover amazing people
       </Text>
     </View>
   );
 }
 
-function ErrorView({
-  message,
-  onRetry,
-}: {
-  message: string;
-  onRetry: () => void;
-}) {
+function ErrorView({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
-    <View style={styles.errorContainer}>
-      <Text style={styles.errorText}>{message}</Text>
-      <Text style={styles.retryButton} onPress={onRetry}>
-        Tap to retry
-      </Text>
-    </View>
-  );
-}
-
-function FriendItem({
-  friend,
-  onRemove,
-  onPress,
-}: {
-  friend: Friend;
-  onRemove: (id: number) => void;
-  onPress: (friend: Friend) => void;
-}) {
-  console.log(friend);
-  return (
-    <TouchableOpacity onPress={() => onPress(friend)} style={styles.friendItem}>
-      {/* <Ionicons name="person-circle-outline" size={40} color="white" style={styles.friendIcon} /> */}
-      <Image
-        source={
-          friend.profile_picture
-            ? { uri: friend.profile_picture }
-            : require("../../assets/default_user.jpg")
-        }
-        style={styles.avatar}
-      />
-      <Text style={styles.friendName}>
-        {friend.first_name} {friend.last_name}
-      </Text>
-      <TouchableOpacity
-        onPress={() => onRemove(friend.id)}
-        style={styles.removeButton}
-      >
-        <Ionicons name="trash-outline" size={24} color="red" />
+    <Animatable.View animation="fadeIn" style={enhancedStyles.errorContainer}>
+      <Ionicons name="warning-outline" size={50} color={ERROR_COLOR} />
+      <Text style={enhancedStyles.errorText}>{message}</Text>
+      <TouchableOpacity style={enhancedStyles.retryButton} onPress={onRetry}>
+        <Text style={enhancedStyles.retryButtonText}>Tap to try again</Text>
       </TouchableOpacity>
-    </TouchableOpacity>
+    </Animatable.View>
+  );
+}
+
+function FriendItem({ friend, onRemove, onPress }: { friend: Friend; onRemove: (id: number) => void; onPress: (friend: Friend) => void }) {
+  const scale = useState(new Animated.Value(1))[0];
+
+  const handlePressIn = useCallback(() => {
+    Animated.spring(scale, {
+      toValue: 0.95,
+      useNativeDriver: true,
+      tension: 50,
+      friction: 5,
+    }).start();
+  }, [scale]);
+
+  const handlePressOut = useCallback(() => {
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      tension: 50,
+      friction: 5,
+    }).start();
+    onPress(friend);
+  }, [scale, onPress, friend]);
+
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <TouchableOpacity style={enhancedStyles.friendItem} onPressIn={handlePressIn} onPressOut={handlePressOut} activeOpacity={0.8}>
+        <Image
+          source={friend.profile_picture ? { uri: friend.profile_picture } : require("../../assets/default_user.jpg")}
+          style={enhancedStyles.avatar}
+        />
+        <View style={enhancedStyles.friendInfo}>
+          <Text style={enhancedStyles.friendName}>
+            {friend.first_name} {friend.last_name}
+          </Text>
+          <Text style={enhancedStyles.friendId}>ID: {friend.id}</Text>
+        </View>
+        <TouchableOpacity onPress={() => onRemove(friend.id)} style={enhancedStyles.removeButton}>
+          <Ionicons name="close-circle" size={30} color={ERROR_COLOR} />
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 
 function FriendsScreen() {
-  // const navigation = useNavigation(); // Add this at the top of FriendsScreen
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
-
   const [state, setState] = useState<FriendsScreenState>({
     friends: [],
     loading: true,
@@ -116,9 +131,7 @@ function FriendsScreen() {
         refreshing: isRefreshing,
         error: null,
       }));
-
       const friendsList = await fetchFriends();
-
       setState((prev) => ({
         ...prev,
         friends: friendsList,
@@ -128,7 +141,7 @@ function FriendsScreen() {
     } catch (err) {
       setState((prev) => ({
         ...prev,
-        error: err instanceof Error ? err.message : "Failed to load friends",
+        error: err instanceof Error ? err.message : "Failed to load connections",
         loading: false,
         refreshing: false,
       }));
@@ -145,27 +158,22 @@ function FriendsScreen() {
 
   const handleRemoveFriend = useCallback(async (friendId: number) => {
     Alert.alert(
-      "Remove Friend",
-      "Are you sure you want to remove this friend?",
+      "Remove Connection",
+      "Are you sure you want to disconnect?",
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Remove",
+          text: "Disconnect",
           style: "destructive",
           onPress: async () => {
             try {
               await removeFriend(friendId);
               setState((prev) => ({
                 ...prev,
-                friends: prev.friends.filter(
-                  (friend) => friend.id !== friendId
-                ),
+                friends: prev.friends.filter((friend) => friend.id !== friendId),
               }));
             } catch (error) {
-              Alert.alert(
-                "Error",
-                "Failed to remove friend. Please try again."
-              );
+              Alert.alert("Error", "Failed to disconnect. Please try again.");
             }
           },
         },
@@ -187,29 +195,26 @@ function FriendsScreen() {
 
   const renderItem: ListRenderItem<Friend> = useCallback(
     ({ item }) => (
-      <FriendItem
-        friend={item}
-        onRemove={handleRemoveFriend}
-        onPress={handlePressFriend}
-      />
+      <FriendItem friend={item} onRemove={handleRemoveFriend} onPress={handlePressFriend} />
     ),
     [handleRemoveFriend, handlePressFriend]
   );
 
   if (state.loading) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#00aaff" />
+      <View style={enhancedStyles.centerContainer}>
+        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+        <Text style={enhancedStyles.loadingText}>Establishing Connections...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.background}>
-      <View style={styles.overlay} />
-      <View style={styles.container}>
-        <Text style={styles.title}>My Friends</Text>
-
+    <Animatable.View animation="fadeIn" style={enhancedStyles.background}>
+      <View style={enhancedStyles.header}>
+        <Text style={enhancedStyles.title}>Your Connections</Text>
+      </View>
+      <View style={enhancedStyles.container}>
         {state.error ? (
           <ErrorView message={state.error} onRetry={() => loadFriends()} />
         ) : (
@@ -221,14 +226,12 @@ function FriendsScreen() {
               <RefreshControl
                 refreshing={state.refreshing}
                 onRefresh={handleRefresh}
-                colors={["#00aaff"]}
-                tintColor="#00aaff"
+                tintColor={PRIMARY_COLOR}
+                colors={[LIGHT_PRIMARY_COLOR, PRIMARY_COLOR, LIGHT_PRIMARY_COLOR]}
               />
             }
             ListEmptyComponent={EmptyState}
-            contentContainerStyle={
-              state.friends.length === 0 && styles.emptyListContent
-            }
+            contentContainerStyle={state.friends.length === 0 && enhancedStyles.emptyListContent}
             showsVerticalScrollIndicator={false}
             initialNumToRender={10}
             maxToRenderPerBatch={10}
@@ -236,107 +239,135 @@ function FriendsScreen() {
           />
         )}
       </View>
-    </View>
+    </Animatable.View>
   );
 }
 
-// Styles
-const styles = StyleSheet.create({
+// Enhanced Styles
+const enhancedStyles = StyleSheet.create({
   background: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#F4F4F4", // Light grey background
   },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.4)", // Semi-transparent black overlay
+  header: {
+    backgroundColor: PRIMARY_COLOR,
+    paddingTop: 20,
+    paddingBottom: 20,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    borderBottomRightRadius:20,
+    borderBottomLeftRadius:20,
   },
   container: {
     flex: 1,
-    padding: 20,
+    padding: 15,
   },
   centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: TEXT_SECONDARY,
+  },
   title: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: "bold",
-    color: "#ffffff",
+    color: TEXT_ON_PRIMARY,
     textAlign: "center",
-    marginBottom: 15,
   },
   errorContainer: {
-    padding: 15,
-    borderRadius: 10,
-    backgroundColor: "rgba(255, 0, 0, 0.1)",
+    padding: 20,
+    borderRadius: 12,
+    backgroundColor: "#FFE0E0",
     borderWidth: 1,
-    borderColor: "#ff4d4d",
+    borderColor: ERROR_COLOR,
     alignItems: "center",
-    marginHorizontal: 20,
+    marginHorizontal: 30,
+    marginVertical: 20,
   },
   errorText: {
-    color: "#ff4d4d",
-    fontSize: 16,
+    color: ERROR_COLOR,
+    fontSize: 18,
     textAlign: "center",
+    marginTop: 10,
   },
   retryButton: {
-    color: "#00aaff",
-    marginTop: 10,
+    backgroundColor: LIGHT_PRIMARY_COLOR,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginTop: 15,
+  },
+  retryButtonText: {
+    color: PRIMARY_COLOR,
     fontSize: 16,
     fontWeight: "bold",
   },
   friendItem: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 15,
-    marginBottom: 10,
-    backgroundColor: "rgba(0, 0, 0, 0.5)", // Semi-transparent black
-    borderRadius: 10,
+    padding: 18,
+    marginBottom: 12,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  friendIcon: {
-    marginRight: 15,
+  avatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginRight: 18,
+  },
+  friendInfo: {
+    flex: 1,
   },
   friendName: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#ffffff", // White text
+    fontSize: 20,
+    fontWeight: "bold",
+    color: TEXT_SECONDARY,
+    marginBottom: 5,
+  },
+  friendId: {
+    fontSize: 14,
+    color: DISABLED_COLOR,
   },
   removeButton: {
-    padding: 5,
+    padding: 8,
   },
   emptyState: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal: 30,
   },
   emptyStateText: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "bold",
-    color: "#ffffff",
-    marginTop: 10,
+    color: PRIMARY_COLOR,
+    marginTop: 15,
+    textAlign: "center",
   },
   emptyStateSubtext: {
     fontSize: 16,
-    color: "#f0f0f0",
+    color: DISABLED_COLOR,
+    marginTop: 8,
+    textAlign: "center",
   },
   emptyListContent: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: "center",
     alignItems: "center",
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 16,
   },
 });
 
