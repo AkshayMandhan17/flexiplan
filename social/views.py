@@ -39,13 +39,14 @@ class UsersView(APIView):
     permission_classes = [IsAuthenticated]  # Require authentication
 
     def get(self, request):
-        """Fetch all users registered in the app."""
+        """Fetch all users except the current user and the admin (id == 1)."""
         try:
-            users = User.objects.all()
+            users = User.objects.exclude(id__in=[request.user.id, 1])
             serializer = UserSerializer(users, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         
 class SendFriendRequestView(APIView):
     authentication_classes = [JWTAuthentication]  # Enforce JWT authentication
