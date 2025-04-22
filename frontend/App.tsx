@@ -104,7 +104,7 @@ function MainTabNavigator() {
       <Tab.Screen name="Explore" component={ExploreHobbiesScreen} />
       <Tab.Screen name="Social" component={SocialStackNavigator} />
       {/* <Tab.Screen name="Chats" component={ChatStack} /> */}
-      {/* <Tab.Screen name="Settings" component={SettingsScreen} /> */}
+      <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
   );
 }

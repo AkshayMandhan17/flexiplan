@@ -104,7 +104,7 @@ function FriendItem({ friend, onRemove, onPress }: { friend: Friend; onRemove: (
           <Text style={enhancedStyles.friendName}>
             {friend.first_name} {friend.last_name}
           </Text>
-          <Text style={enhancedStyles.friendId}>ID: {friend.id}</Text>
+          {/* <Text style={enhancedStyles.friendId}>ID: {friend.id}</Text> */}
         </View>
         <TouchableOpacity onPress={() => onRemove(friend.id)} style={enhancedStyles.removeButton}>
           <Ionicons name="close-circle" size={30} color={ERROR_COLOR} />

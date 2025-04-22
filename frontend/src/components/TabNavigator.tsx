@@ -53,7 +53,7 @@ export default function TabNavigator() {
           ),
         }}
       />
-      {/* <Tab.Screen
+      <Tab.Screen
         name="Settings"
         component={SettingsScreen}
         options={{
@@ -62,7 +62,7 @@ export default function TabNavigator() {
             <Ionicons name="menu" size={size} color={color} />
           ),
         }}
-      /> */}
+      />
     </Tab.Navigator>
   );
 }
