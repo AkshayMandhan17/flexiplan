@@ -84,9 +84,10 @@ function MainTabNavigator() {
             iconName = focused ? "compass" : "compass-outline";
           } else if (route.name === "Social") {
             iconName = focused ? "people" : "people-outline";
-          } else if (route.name === "Settings") {
-            iconName = focused ? "settings" : "settings-outline";
-          }
+          } 
+          // else if (route.name === "Settings") {
+          //   iconName = focused ? "settings" : "settings-outline";
+          // }
           // else if (route.name === 'Chats') {
           //     iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
           // }
@@ -104,7 +105,7 @@ function MainTabNavigator() {
       <Tab.Screen name="Explore" component={ExploreHobbiesScreen} />
       <Tab.Screen name="Social" component={SocialStackNavigator} />
       {/* <Tab.Screen name="Chats" component={ChatStack} /> */}
-      <Tab.Screen name="Settings" component={SettingsScreen} />
+      {/* <Tab.Screen name="Settings" component={SettingsScreen} /> */}
     </Tab.Navigator>
   );
 }
