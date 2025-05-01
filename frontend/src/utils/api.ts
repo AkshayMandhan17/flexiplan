@@ -599,36 +599,71 @@ export const updateRoutine = async (userId: number) => {
   }
 };
 
-// Upload user profile picture
-export const uploadUserPfp = async (profilePicture: string) => {
+// Upload user profile picture using FormData
+export const uploadUserPfp = async (profilePictureUri: string) => {
   try {
-    // Get authentication headers
-    const headers = await getAuthHeaders();
+    const headers = await getAuthHeaders(); // Get auth token header
 
-    // Make API request to upload profile picture
+    const formData = new FormData();
+
+    const uriParts = profilePictureUri.split('/');
+    const fileName = uriParts[uriParts.length - 1];
+    let fileType = '';
+    const nameParts = fileName.split('.');
+    if (nameParts.length > 1) {
+        const extension = nameParts[nameParts.length - 1].toLowerCase();
+        if (extension === 'jpg' || extension === 'jpeg') {
+            fileType = 'image/jpeg';
+        } else if (extension === 'png') {
+            fileType = 'image/png';
+        } else if (extension === 'gif') {
+            fileType = 'image/gif';
+        } else {
+            fileType = 'application/octet-stream'; // Or handle appropriately
+            console.warn("Unknown file type for:", fileName);
+        }
+    }
+
+    if (!fileType) {
+         Alert.alert("Error", "Could not determine file type for upload.");
+         return; // Or throw error
+    }
+    formData.append('profile_picture', {
+      uri: profilePictureUri,
+      name: fileName,
+      type: fileType,
+    } as any); // Use 'as any' or define a proper type if using strict TypeScript
+
+    // delete headers['Content-Type'];
+
     const response = await fetch(`${API_BASE_URL}/api/upload-pfp/`, {
-      method: "PUT",
-      headers,
-      body: JSON.stringify({
-        profile_picture: profilePicture,  // Send the profile picture as a string (URL or base64)
-      }),
+      method: "PUT", // Or POST, depending on your preference, PUT is common for updates
+      headers: {
+        'Authorization': headers.Authorization
+      },
+      body: formData,   // Send the FormData object as the body
     });
 
     const data = await response.json();
 
     if (!response.ok) {
-      const errorMessage = data.error || "Failed to upload profile picture";
+      const errorMessage = data.error || data.detail || "Failed to upload profile picture";
       Alert.alert("Error", errorMessage);
-      return;
+      console.error("Upload error details:", data);
+      // Do not throw here if you handle errors with Alerts, just return maybe null
+      return null;
     }
 
-    // Handle success response (optional)
-    Alert.alert("Success", "Profile picture uploaded successfully!");
-    return data; // Return the response (e.g., updated user data)
-  } catch (error) {
+    // Handle success response
+    Alert.alert("Success", data.message || "Profile picture uploaded successfully!");
+    // Return the updated data which should include the new public URL
+    return data;
+
+  } catch (error: any) {
     console.error("Error uploading profile picture:", error);
-    const errorMessage = (error as any).message || "Failed to upload profile picture.";
+    const errorMessage = error.message || "An unexpected error occurred during upload.";
     Alert.alert("Error", errorMessage);
-    throw error;
+    // throw error; // Re-throwing might crash the app if not caught upstream
+     return null;
   }
 };

@@ -11,10 +11,22 @@ class User(AbstractUser):
     password = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
     last_login = models.DateTimeField(blank=True, null=True)
-    profile_picture = models.CharField(max_length=255, blank=True, null=True)
+    # CHANGE THIS: Use ImageField
+    profile_picture = models.ImageField(
+        upload_to='profile_pics/', # Store images in MEDIA_ROOT/profile_pics/
+        blank=True,
+        null=True
+    )
 
     def __str__(self):
         return self.username
+
+    # Optional: Add a property to get the full URL
+    @property
+    def profile_picture_url(self):
+        if self.profile_picture and hasattr(self.profile_picture, 'url'):
+            return self.profile_picture.url
+        return None # Or return URL to a default image on the server
 
 
 # Hobbies Table

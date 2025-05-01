@@ -25,11 +25,21 @@ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import AsyncStorage from "@react-native-async-storage/async-storage"; // Import AsyncStorage
 import { Dimensions } from "react-native";
 import { RoutineData, UserRoutineResponse } from "../utils/model";
-import { fetchUserRoutines, generateRoutine, updateRoutine } from "../utils/api";
+import {
+  fetchUserRoutines,
+  generateRoutine,
+  updateRoutine,
+} from "../utils/api";
 import { createStackNavigator } from "@react-navigation/stack";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
 import { useAuth } from "../components/AuthContext"; // Make sure this path is correct
 import FriendsScreen from "./FriendsScreen"; // Make sure this path is correct
+
+import { Image, Modal } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import { uploadUserPfp } from "../utils/api";
+import { fetchPublicUserDetails } from "../utils/api";
+import { API_BASE_URL } from "../config";
 
 const SettingsStack = createStackNavigator();
 const windowHeight = Dimensions.get("window").height;
@@ -47,12 +57,24 @@ type SettingsScreenContentNavigationProp = NavigationProp<
   "SettingsContent"
 >;
 
+type User = {
+  id: number;
+  username: string;
+  first_name: string;
+  last_name: string;
+  profile_picture: string | null;
+};
+
 const HomeScreen = () => {
+  const [profilePic, setProfilePic] = useState<string | null>(null);
+  const [showPopup, setShowPopup] = useState(false); // To control popup visibility
   const tabBarHeight = useBottomTabBarHeight();
   const [isSidebarVisible, setSidebarVisible] = useState(false);
   const [sidebarAnimation] = useState(new Animated.Value(250));
-  const [weeklyRoutineData, setWeeklyRoutineData] = useState<RoutineData | null>(null);
-  const [routineLoadingError, setRoutineLoadingError] = useState<boolean>(false);
+  const [weeklyRoutineData, setWeeklyRoutineData] =
+    useState<RoutineData | null>(null);
+  const [routineLoadingError, setRoutineLoadingError] =
+    useState<boolean>(false);
   const [currentDayIndex, setCurrentDayIndex] = useState<number>(0); // 0 for today, -1 for yesterday, 1 for tomorrow, etc.
   const daysOfWeek = [
     "Sunday",
@@ -75,6 +97,90 @@ const HomeScreen = () => {
   const [username, setUsername] = useState<string>("");
   const [isOffDay, setIsOffDay] = useState(false);
   const { setIsLoggedIn } = useAuth();
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  const handleChooseImage = async () => {
+    try {
+      const permissionResult =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert(
+          "Permission required",
+          "You need to allow access to your photos."
+        );
+        return;
+      }
+      const pickerResult = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+      });
+      if (!pickerResult.canceled) {
+        const localImageUri = pickerResult.assets[0].uri;
+        try {
+          // Show a loading indicator here ideally
+          const uploadResponse = await uploadUserPfp(localImageUri); // Upload the file
+
+          if (uploadResponse && uploadResponse.profile_picture_url) {
+            // Update state with the NEW public URL from the server response
+            setProfilePic(uploadResponse.profile_picture_url);
+            // Optionally update currentUser state if needed
+          } else {
+            // Handle upload failure (Alerts are shown in api.ts)
+            // Maybe revert to old picture or keep local URI temporarily?
+          }
+          // Hide loading indicator
+        } catch (error) {
+          // Hide loading indicator
+          console.error("Upload failed in component:", error);
+          // Alert might have already been shown by api.ts
+        }
+      }
+    } catch (error) {
+      console.error("Error picking image:", error);
+    }
+  };
+
+  const handleTakePhoto = async () => {
+    try {
+      const permissionResult =
+        await ImagePicker.requestCameraPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert(
+          "Permission required",
+          "You need to allow access to your camera."
+        );
+        return;
+      }
+      const cameraResult = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+      });
+      if (!cameraResult.canceled) {
+        const localImageUri = cameraResult.assets[0].uri;
+        try {
+          // Show a loading indicator here ideally
+          const uploadResponse = await uploadUserPfp(localImageUri); // Upload the file
+
+          if (uploadResponse && uploadResponse.profile_picture_url) {
+            // Update state with the NEW public URL from the server response
+            setProfilePic(uploadResponse.profile_picture_url);
+          } else {
+            // Handle upload failure
+          }
+          // Hide loading indicator
+        } catch (error) {
+          // Hide loading indicator
+          console.error("Upload failed in component:", error);
+        }
+      }
+    } catch (error) {
+      console.error("Error taking photo:", error);
+    }
+  };
 
   const handleLogout = async () => {
     Alert.alert(
@@ -124,64 +230,88 @@ const HomeScreen = () => {
       return;
     }
     setWeeklyRoutineData(newRoutineData);
-  }
-  
+  };
+
+  const toggleSidebar = () => {
+    if (isSidebarVisible) {
+      Animated.timing(sidebarAnimation, {
+        toValue: 250,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => setSidebarVisible(false));
+    } else {
+      setSidebarVisible(true);
+      Animated.timing(sidebarAnimation, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  };
+
   const settings = [
     {
       id: "1",
-      title: "View Hobbies",
-      action: () => navigation.navigate("UserHobbies"),
-      IconFamily: 'FontAwesome5',
-      IconName:'hospital-symbol',
+      title: "Home",
+      action: toggleSidebar,
+      IconFamily: "Icon",
+      IconName: "home-outline",
     },
     {
       id: "2",
-      title: "View Tasks",
-      action: () => navigation.navigate("UserTasks"),
-      IconFamily: 'FontAwesome',
-      IconName:'tasks',
+      title: "View Hobbies",
+      action: () => navigation.navigate("UserHobbies"),
+      IconFamily: "FontAwesome5",
+      IconName: "hospital-symbol",
     },
     {
       id: "3",
-      title: "View Saved Routines",
-      action: () => console.log("View Saved Routines"), // Replace with actual navigation
-      IconFamily: 'FontAwesome',
-      IconName:'life-saver',
+      title: "View Tasks",
+      action: () => navigation.navigate("UserTasks"),
+      IconFamily: "FontAwesome",
+      IconName: "tasks",
     },
     {
       id: "4",
-      title: "View Friends",
-      action: () => navigation.navigate("FriendsScreen"),
-      IconFamily: 'Icon',
-      IconName:'people-outline',
+      title: "View Saved Routines",
+      action: () => console.log("View Saved Routines"), // Replace with actual navigation
+      IconFamily: "FontAwesome",
+      IconName: "life-saver",
     },
     {
       id: "5",
-      title: "Update Username",
-      action: () => console.log("Update Username"), //  Implement username update logic
-      IconFamily: 'FontAwesome',
-      IconName:'user',
+      title: "View Friends",
+      action: () => navigation.navigate("FriendsScreen"),
+      IconFamily: "Icon",
+      IconName: "people-outline",
     },
     {
       id: "6",
-      title: "Change Password",
-      action: () => console.log("Change Password"), // Implement password change logic
-      IconFamily: 'MaterialIcons',
-      IconName:'password',
+      title: "Update Username",
+      action: () => console.log("Update Username"), //  Implement username update logic
+      IconFamily: "FontAwesome",
+      IconName: "user",
     },
     {
-      id: "8",  // Add a new ID
+      id: "7",
+      title: "Change Password",
+      action: () => console.log("Change Password"), // Implement password change logic
+      IconFamily: "MaterialIcons",
+      IconName: "password",
+    },
+    {
+      id: "8", // Add a new ID
       title: "Generate Routine",
       action: handleGenerateRoutine, // Call the generateRoutine function
       IconFamily: "Ionicons", // Or the appropriate icon family
-      IconName: "refresh",   // Choose an appropriate icon name
+      IconName: "refresh", // Choose an appropriate icon name
     },
-    { 
-      id: "7", 
-      title: "Logout", 
+    {
+      id: "9",
+      title: "Logout",
       action: handleLogout,
-      IconFamily: 'Icon',
-      IconName:'log-out-outline', 
+      IconFamily: "Icon",
+      IconName: "log-out-outline",
     },
   ];
 
@@ -191,6 +321,10 @@ const HomeScreen = () => {
         const savedUsername = await AsyncStorage.getItem("user_username");
         if (savedUsername) {
           setUsername(savedUsername);
+          const userDetails = await fetchPublicUserDetails(savedUsername);
+          setCurrentUser(userDetails);
+          setProfilePic(API_BASE_URL + userDetails.profile_picture);
+          // console.log(API_BASE_URL + userDetails.profile_picture);
         }
       } catch (error) {
         console.error("Failed to fetch username from AsyncStorage:", error);
@@ -206,7 +340,7 @@ const HomeScreen = () => {
       console.log("No user_id found in AsyncStorage");
       return; // or handle accordingly
     }
-    
+
     const userId = parseInt(savedId, 10);
     try {
       if (!userId) {
@@ -214,8 +348,7 @@ const HomeScreen = () => {
         return;
       }
       setIsOffDay(!isOffDay);
-      if(!isOffDay)
-      {
+      if (!isOffDay) {
         const updatedRoutine = await updateRoutine(userId);
 
         if (updatedRoutine) {
@@ -226,23 +359,7 @@ const HomeScreen = () => {
       console.error("Error toggling off-day:", error);
       Alert.alert("Error", error.message || "Failed to toggle off-day.");
       // Optionally reset the toggle switch if the API call fails:
-      setIsOffDay(false); 
-    }
-  };
-  const toggleSidebar = () => {
-    if (isSidebarVisible) {
-      Animated.timing(sidebarAnimation, {
-        toValue: 250,
-        duration: 300,
-        useNativeDriver: true,
-      }).start(() => setSidebarVisible(false));
-    } else {
-      setSidebarVisible(true);
-      Animated.timing(sidebarAnimation, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
+      setIsOffDay(false);
     }
   };
 
@@ -263,39 +380,104 @@ const HomeScreen = () => {
         <Text style={styles.brandName}>Flexiplan</Text>
       </View>
       <View style={styles.menuItems}>
-        <TouchableOpacity onPress={toggleSidebar} style={styles.menuItem}>
+        {/* <TouchableOpacity onPress={toggleSidebar} style={styles.menuItem}>
           <Icon name="home-outline" size={24} color="white" />
           <Text style={styles.menuText}>Home</Text>
-        </TouchableOpacity>
-        {/* <TouchableOpacity style={styles.menuItem}>
-          <Icon name="person-outline" size={24} color="white" />
-          <Text style={styles.menuText}>Profile</Text>
         </TouchableOpacity> */}
-        {/* <TouchableOpacity style={styles.menuItem}>
-          <Icon name="settings-outline" size={24} color="white" />
-          <Text style={styles.menuText}>Settings</Text>
-        </TouchableOpacity> */}
-        {/* <TouchableOpacity style={styles.menuItem}>
-          <Icon name="people-outline" size={24} color="white" />
-          <Text style={styles.menuText}>Add Friend</Text>
-        </TouchableOpacity> */}
-        {/* <TouchableOpacity style={styles.menuItem}>
-          <Icon name="log-out-outline" size={24} color="white" />
-          <Text style={styles.menuText}>Logout</Text>
-        </TouchableOpacity> */}
-
+        <View style={styles.profileSection}>
+          <View style={styles.profileImageWrapper}>
+            <View>
+              <Image
+                source={
+                  profilePic
+                    ? { uri: profilePic }
+                    : require("../../assets/default_user.jpg")
+                }
+                style={{
+                  width: 120,
+                  height: 120,
+                  borderRadius: 60,
+                  borderWidth: 3,
+                  borderColor: "white",
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 5,
+                }}
+              />
+              <TouchableOpacity
+                style={{
+                  position: "absolute",
+                  bottom: 0,
+                  right: 0,
+                  backgroundColor: "#FFCC00",
+                  borderRadius: 15,
+                  padding: 5,
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 5,
+                  elevation: 10,
+                }}
+                onPress={() => setShowPopup(true)}
+              >
+                <Ionicons name="camera" size={25} color="white" />
+              </TouchableOpacity>
+            </View>
+          </View>
+          {/* <Text style={styles.username}>
+          {currentUser
+            ? `${currentUser.first_name} ${currentUser.last_name}`
+            : "Loading..."}
+        </Text> */}
+        </View>
+        <Modal
+          visible={showPopup}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowPopup(false)}
+        >
+          <View style={styles.popupContainer}>
+            <TouchableOpacity
+              style={styles.popupOption}
+              onPress={() => {
+                handleTakePhoto();
+                setShowPopup(false);
+              }}
+            >
+              <Ionicons name="camera" size={30} color="white" />
+              <Text style={styles.popupText}>Take Photo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.popupOption}
+              onPress={() => {
+                handleChooseImage();
+                setShowPopup(false);
+              }}
+            >
+              <Ionicons name="image" size={30} color="white" />
+              <Text style={styles.popupText}>Choose from Gallery</Text>
+            </TouchableOpacity>
+          </View>
+        </Modal>
         <FlatList
           data={settings}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <TouchableOpacity style={styles.menuItem} onPress={item.action}>
-              {
-                item.IconFamily === 'FontAwesome' ? <FontAwesome name={item.IconName} size={24} color="white" /> : 
-                item.IconFamily === 'FontAwesome5' ? <FontAwesome5 name={item.IconName} size={24} color="white" /> :
-                item.IconFamily === 'MaterialIcons' ? <MaterialIcons name={item.IconName} size={24} color="white" /> :
-                item.IconFamily === 'Ionicons' ? <Ionicons name={item.IconName} size={24} color="white" /> :
-                item.IconFamily === 'Icon' ? <Icon name={item.IconName} size={24} color="white" /> : null
-              }
+              <View style={{ width: 33, alignItems: "center" }}>
+                {item.IconFamily === "FontAwesome" ? (
+                  <FontAwesome name={item.IconName} size={24} color="white" />
+                ) : item.IconFamily === "FontAwesome5" ? (
+                  <FontAwesome5 name={item.IconName} size={24} color="white" />
+                ) : item.IconFamily === "MaterialIcons" ? (
+                  <MaterialIcons name={item.IconName} size={24} color="white" />
+                ) : item.IconFamily === "Ionicons" ? (
+                  <Ionicons name={item.IconName} size={24} color="white" />
+                ) : item.IconFamily === "Icon" ? (
+                  <Icon name={item.IconName} size={24} color="white" />
+                ) : null}
+              </View>
               <Text style={styles.menuText}>{item.title}</Text>
             </TouchableOpacity>
           )}
@@ -331,15 +513,16 @@ const HomeScreen = () => {
 
   useEffect(() => {
     const fetchRoutine = async () => {
-    const data = await fetchUserRoutines();
-    if (data && data.routine_data) { // Check if data and routine_data exist
-      setWeeklyRoutineData(data.routine_data);
-      setRoutineLoadingError(false); // Reset error state if successful
-    } else {
-      setWeeklyRoutineData(null); // Explicitly set to null if no data
-      setRoutineLoadingError(true); // Set error state
-    }
-    // if data.error -> alert that user routine not found
+      const data = await fetchUserRoutines();
+      if (data && data.routine_data) {
+        // Check if data and routine_data exist
+        setWeeklyRoutineData(data.routine_data);
+        setRoutineLoadingError(false); // Reset error state if successful
+      } else {
+        setWeeklyRoutineData(null); // Explicitly set to null if no data
+        setRoutineLoadingError(true); // Set error state
+      }
+      // if data.error -> alert that user routine not found
     };
 
     fetchRoutine();
@@ -452,55 +635,54 @@ const HomeScreen = () => {
       {isSidebarVisible && <Sidebar />}
 
       <ScrollView style={{ flex: 1 }}>
-      <View style={{ height: 230 }}>
-        <View style={styles.header}>
-          <Text style={styles.heading}>Routines</Text>
-        </View>
-        <FlatList
-          data={routines}
-          horizontal
-          keyExtractor={(item) => item.id}
-          showsHorizontalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={() => setActiveRoutine(item.id)}
-            >
-              <View
-                style={[
-                  styles.routineCard,
-                  activeRoutine === item.id && styles.activeRoutineCard,
-                ]}
+        <View style={{ height: 230 }}>
+          <View style={styles.header}>
+            <Text style={styles.heading}>Routines</Text>
+          </View>
+          <FlatList
+            data={routines}
+            horizontal
+            keyExtractor={(item) => item.id}
+            showsHorizontalScrollIndicator={false}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={() => setActiveRoutine(item.id)}
               >
-                <View style={styles.avatar}>
-                  <Text style={styles.emoji}>{item.emoji}</Text>
+                <View
+                  style={[
+                    styles.routineCard,
+                    activeRoutine === item.id && styles.activeRoutineCard,
+                  ]}
+                >
+                  <View style={styles.avatar}>
+                    <Text style={styles.emoji}>{item.emoji}</Text>
+                  </View>
+                  <Text style={styles.routineName}>{item.name}</Text>
+                  <ProgressBar
+                    progress={item.progress}
+                    color="#76c7c0"
+                    style={styles.progressBar}
+                  />
+                  <Text style={styles.progressText}>
+                    {Math.round(item.progress * 100)}% Complete
+                  </Text>
                 </View>
-                <Text style={styles.routineName}>{item.name}</Text>
-                <ProgressBar
-                  progress={item.progress}
-                  color="#76c7c0"
-                  style={styles.progressBar}
-                />
-                <Text style={styles.progressText}>
-                  {Math.round(item.progress * 100)}% Complete
-                </Text>
-              </View>
-            </TouchableOpacity>
-          )}
-        />
-      </View>
-          { !weeklyRoutineData ? (
-            <View style={styles.noRoutineContainer}>
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+        {!weeklyRoutineData ? (
+          <View style={styles.noRoutineContainer}>
             <Text style={styles.noRoutineText}>No routine found.</Text>
-            <TouchableOpacity 
-              style={styles.generateButton} 
+            <TouchableOpacity
+              style={styles.generateButton}
               onPress={handleGenerateRoutine}
             >
               <Text style={styles.generateButtonText}>Generate Routine</Text>
             </TouchableOpacity>
           </View>
-          ) :
-          (
+        ) : (
           <View style={styles.section}>
             <View
               style={[
@@ -520,7 +702,11 @@ const HomeScreen = () => {
                 <Text style={styles.dateText}>{getCurrentDayText()}</Text>
               </View>
               <TouchableOpacity onPress={() => changeDay(1)}>
-                <Icon name="chevron-forward-outline" size={24} color="#76c7c0" />
+                <Icon
+                  name="chevron-forward-outline"
+                  size={24}
+                  color="#76c7c0"
+                />
               </TouchableOpacity>
             </View>
             {tasks.map((task) => (
@@ -547,7 +733,6 @@ const HomeScreen = () => {
             ))}
           </View>
         )}
-
       </ScrollView>
     </View>
   );
@@ -727,7 +912,7 @@ const styles = StyleSheet.create({
   },
   menuItems: {
     marginTop: 20,
-    height:'80%',
+    height: "80%",
   },
   menuItem: {
     flexDirection: "row",
@@ -756,5 +941,34 @@ const styles = StyleSheet.create({
     paddingVertical: 30,
     borderTopLeftRadius: 20,
     borderBottomLeftRadius: 20,
+  },
+  profileSection: {
+    alignItems: "center",
+  },
+  profileImageWrapper: {
+    position: "relative",
+    alignItems: "center",
+  },
+  popupContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  popupOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFCC00",
+    padding: 15,
+    borderRadius: 10,
+    marginVertical: 10,
+    width: 250,
+    justifyContent: "center",
+  },
+  popupText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 16,
+    marginLeft: 10,
   },
 });

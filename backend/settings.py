@@ -11,10 +11,13 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -25,7 +28,7 @@ SECRET_KEY = 'django-insecure-_^=!p_t)#o^!7phui2w%9_@h)=fho*=88bvwm0q@z-$d3c2*#n
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '192.168.100.6', '192.168.0.102', '10.0.2.174', '192.168.1.119']  # Add the IP address of your machine
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '192.168.100.6', '192.168.0.102', '10.0.2.174', '192.168.100.215']  # Add the IP address of your machine
 
 GOOGLE_API_KEY= "AIzaSyBP2VOHu7uFsJ5kNxxWoyalLygStnRagQs"
 
