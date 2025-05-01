@@ -13,7 +13,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import UserHobbiesScreen from "./UserHobbiesScreen"; // Make sure this path is correct
-import { useAuth } from "../components/AuthContext"; // Make sure this path is correct
+import { useAuth } from "../contexts/AuthContext"; // Make sure this path is correct
 import UserTasksScreen from "./UserTasksScreen"; // Make sure this path is correct
 import LottieView from "lottie-react-native";
 import FriendsScreen from "./FriendsScreen"; // Make sure this path is correct
@@ -57,7 +57,7 @@ const SettingsScreen = () => {
   const navigation = useNavigation<SettingsScreenContentNavigationProp>();
   const [username, setUsername] = useState<string>("");
   const [isOffDay, setIsOffDay] = useState(false);
-  const { setIsLoggedIn } = useAuth(); // Get setIsLoggedIn from AuthContext
+  const { logout } = useAuth();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   const handleChooseImage = async () => {
@@ -129,17 +129,8 @@ const SettingsScreen = () => {
           text: "OK",
           onPress: async () => {
             try {
-              // Clear AsyncStorage
-              await AsyncStorage.removeItem("access_token");
-              await AsyncStorage.removeItem("refresh_token");
-              await AsyncStorage.removeItem("user_id");
-              await AsyncStorage.removeItem("user_username");
-
-              // Update AuthContext to indicate logout
-              setIsLoggedIn(false);
-
-              // Navigate to the Login screen.  This assumes you have a 'Login' route.
-              () => navigation.navigate("Login");
+              await logout();
+              navigation.navigate("Login");
             } catch (error) {
               console.error("Failed to log out:", error);
               Alert.alert("Error", "Failed to log out. Please try again.");

@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { Input, Button, Icon } from "react-native-elements";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useAuth } from "../components/AuthContext";
+import { useAuth } from "../contexts/AuthContext";
 import { API_BASE_URL } from "../config";
 import { login } from "../utils/api";
 import Animated, { FadeInUp, FadeInDown } from "react-native-reanimated";
@@ -35,7 +35,7 @@ const LoginScreen = ({ navigation }: any) => {
     password?: string;
   }>({});
 
-  const { setIsLoggedIn } = useAuth();
+  const { login } = useAuth();
 
   const handleLogin = async () => {
     setErrors({});
@@ -52,8 +52,7 @@ const LoginScreen = ({ navigation }: any) => {
     }
 
     try {
-      const data = await login(username, password);
-      setIsLoggedIn(true);
+      await login(username, password);
     } catch (error: any) {
       Alert.alert("Error", error.message || "Failed to connect to the server.");
     }

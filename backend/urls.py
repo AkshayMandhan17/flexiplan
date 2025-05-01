@@ -29,4 +29,5 @@ urlpatterns = [
     path('api/', include('hobbies.urls')),
     path('api/', include('social.urls')),
     path('api/', include('chat.urls')),
+    path('api/agent/', include('agent.urls')),
 ]

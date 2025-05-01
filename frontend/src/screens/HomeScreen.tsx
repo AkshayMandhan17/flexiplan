@@ -28,7 +28,7 @@ import { RoutineData, UserRoutineResponse } from "../utils/model";
 import { fetchUserRoutines, generateRoutine, updateRoutine } from "../utils/api";
 import { createStackNavigator } from "@react-navigation/stack";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
-import { useAuth } from "../components/AuthContext"; // Make sure this path is correct
+import { useAuth } from "../contexts/AuthContext";
 import FriendsScreen from "./FriendsScreen"; // Make sure this path is correct
 
 const SettingsStack = createStackNavigator();
@@ -74,7 +74,7 @@ const HomeScreen = () => {
   const navigation = useNavigation<SettingsScreenContentNavigationProp>();
   const [username, setUsername] = useState<string>("");
   const [isOffDay, setIsOffDay] = useState(false);
-  const { setIsLoggedIn } = useAuth();
+  const { logout } = useAuth();
 
   const handleLogout = async () => {
     Alert.alert(
@@ -89,17 +89,8 @@ const HomeScreen = () => {
           text: "OK",
           onPress: async () => {
             try {
-              // Clear AsyncStorage
-              await AsyncStorage.removeItem("access_token");
-              await AsyncStorage.removeItem("refresh_token");
-              await AsyncStorage.removeItem("user_id");
-              await AsyncStorage.removeItem("user_username");
-
-              // Update AuthContext to indicate logout
-              setIsLoggedIn(false);
-
-              // Navigate to the Login screen.  This assumes you have a 'Login' route.
-              () => navigation.navigate("Login");
+              await logout();
+              navigation.navigate("Login");
             } catch (error) {
               console.error("Failed to log out:", error);
               Alert.alert("Error", "Failed to log out. Please try again.");

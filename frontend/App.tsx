@@ -5,7 +5,7 @@ import { createStackNavigator } from "@react-navigation/stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"; // Import Bottom Tabs
 import SignupScreen from "./src/screens/SignupScreen";
 import LoginScreen from "./src/screens/LoginScreen";
-import { AuthProvider, useAuth } from "./src/components/AuthContext";
+import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import RoutineSetupScreen from "./src/screens/RoutineSetupScreen";
 import ChatScreen from "./src/screens/ChatScreen";
 import UserHobbiesScreen from "./src/screens/UserHobbiesScreen";
@@ -21,6 +21,7 @@ import AddTaskScreen from "./src/screens/AddTaskScreen";
 import FriendsScreen from "./src/screens/FriendsScreen";
 import FriendRequestsScreen from "./src/screens/FriendRequestsScreen";
 import Icon from "react-native-vector-icons/Ionicons"; // Example: using Ionicons
+import ChatAgentScreen from "./src/screens/ChatAgentScreen";
 
 export type RootStackParamList = {
   TabNavigator: undefined;
@@ -38,7 +39,7 @@ export type RootStackParamList = {
   FriendRequests: undefined; // Keep for individual screen
   Social: undefined; // Add this for the SocialStack (tab)
   Chats: { friendId: number; friendName: string; friendAvatar: string; };
-
+  ChatAgent: undefined;
 };
 
 export type SocialStackParamList = {
@@ -86,6 +87,8 @@ function MainTabNavigator() {
             iconName = focused ? "people" : "people-outline";
           } else if (route.name === "Settings") {
             iconName = focused ? "settings" : "settings-outline";
+          } else if (route.name === "Assistant") {
+            iconName = focused ? "chatbubble" : "chatbubble-outline";
           }
           // else if (route.name === 'Chats') {
           //     iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
@@ -102,6 +105,7 @@ function MainTabNavigator() {
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Explore" component={ExploreHobbiesScreen} />
+      <Tab.Screen name="Assistant" component={ChatAgentScreen} />
       <Tab.Screen name="Social" component={SocialStackNavigator} />
       {/* <Tab.Screen name="Chats" component={ChatStack} /> */}
       <Tab.Screen name="Settings" component={SettingsScreen} />
@@ -110,18 +114,15 @@ function MainTabNavigator() {
 }
 
 const AppNavigator = () => {
-  const { isLoggedIn, setIsLoggedIn } = useAuth();
+  const { token, isAuthenticated, setToken } = useAuth();
   const [loading, setLoading] = useState(true);
   const [hasSeenIntro, setHasSeenIntro] = useState<boolean | null>(null);
-  // const [showIntro, setShowIntro] = useState(false); // Consider removing if not needed
 
   useEffect(() => {
     const checkIntroductionScreen = async () => {
       try {
         const introSeen = await AsyncStorage.getItem("hasSeenIntro");
-        if (!hasSeenIntro) {
-          setHasSeenIntro(!!introSeen); // Consider removing if intro is handled elsewhere
-        }
+        setHasSeenIntro(!!introSeen);
       } catch (error) {
         console.error("Error checking introduction screen:", error);
       }
@@ -130,10 +131,11 @@ const AppNavigator = () => {
     const loadAuthToken = async () => {
       try {
         const accessToken = await AsyncStorage.getItem("access_token");
-        setIsLoggedIn(!!accessToken); // More concise way to set boolean
+        if (accessToken) {
+          setToken(accessToken);
+        }
       } catch (error) {
         console.error("Error loading auth token:", error);
-        setIsLoggedIn(false);
       } finally {
         setLoading(false);
       }
@@ -141,7 +143,7 @@ const AppNavigator = () => {
 
     checkIntroductionScreen();
     loadAuthToken();
-  }, [setIsLoggedIn]);
+  }, []);
 
   if (loading || hasSeenIntro === null) {
     return (
@@ -155,17 +157,16 @@ const AppNavigator = () => {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!hasSeenIntro ? (
-          <>
           <Stack.Screen
             name="onBoarding"
             component={IntroductionAnimationScreen}
-            options={{ headerShown: false }}
           />
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Signup" component={SignupScreen} />
+        ) : !isAuthenticated ? (
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Signup" component={SignupScreen} />
           </>
-        ) : isLoggedIn ? (
-          // Logged-in screens
+        ) : (
           <>
             <Stack.Screen name="TabNavigator" component={MainTabNavigator} />
             <Stack.Screen name="UserHobbies" component={UserHobbiesScreen} />
@@ -173,11 +174,6 @@ const AppNavigator = () => {
             <Stack.Screen name="AddUserTask" component={AddTaskScreen} />
             <Stack.Screen name="Chats" component={ChatScreen} />
             <Stack.Screen name="FriendsScreen" component={FriendsScreen} />
-          </>
-        ) : (
-          <>
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="Signup" component={SignupScreen} />
           </>
         )}
       </Stack.Navigator>
