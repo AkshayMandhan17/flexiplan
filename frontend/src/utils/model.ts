@@ -66,3 +66,55 @@ export interface FriendRequest {
   last_name: string;
   profile_picture: string | null;
 }
+
+export interface Message {
+  id: number;
+  content: string;
+  is_user: boolean;
+  created_at: string;  // ISO timestamp
+}
+
+export interface Conversation {
+  id: number;
+  user: number;
+  created_at: string;
+  updated_at: string;
+  is_active: boolean;
+  messages: Message[];
+}
+
+export interface ChatResponse {
+  response: string;
+}
+
+export interface ChatError {
+  error: string;
+}
+
+export interface SuggestedMessage {
+  text: string;
+  description: string;
+}
+
+export const SUGGESTED_MESSAGES: SuggestedMessage[] = [
+  {
+    text: "I want to add a task to my profile",
+    description: "Add a new task to your daily routine"
+  },
+  {
+    text: "I want to add a hobby to my profile",
+    description: "Add a new hobby to your interests"
+  },
+  {
+    text: "Show me my current routine",
+    description: "View your current daily schedule"
+  },
+  {
+    text: "Help me balance my work and hobbies",
+    description: "Get suggestions for better work-life balance"
+  },
+  {
+    text: "I'm feeling stressed today",
+    description: "Get personalized recommendations for stress relief"
+  }
+];

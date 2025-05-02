@@ -1,7 +1,7 @@
 import { API_BASE_URL } from "../config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Alert } from 'react-native'; // Import Alert
-import { RoutineData, TaskFormData, UserRoutineResponse, User} from "./model";
+import { RoutineData, TaskFormData, UserRoutineResponse, User, Message, ChatResponse} from "./model";
 import { FriendRequest } from "./model";
 
 // Helper function to get authentication headers
@@ -630,5 +630,49 @@ export const uploadUserPfp = async (profilePicture: string) => {
     const errorMessage = (error as any).message || "Failed to upload profile picture.";
     Alert.alert("Error", errorMessage);
     throw error;
+  }
+};
+
+// Chat API endpoints
+export const chatApi = {
+  sendMessage: async (message: string): Promise<ChatResponse> => {
+    try {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_BASE_URL}/api/agent/chat/`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ message })
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to send message');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error sending message:', error);
+      throw error;
+    }
+  },
+
+  getMessages: async (): Promise<{ messages: Message[] }> => {
+    try {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_BASE_URL}/api/agent/chat/`, {
+        method: 'GET',
+        headers
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to fetch messages');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      throw error;
+    }
   }
 };
