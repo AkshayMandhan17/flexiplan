@@ -20,13 +20,14 @@ import UserTasksScreen from "./src/screens/UserTasksScreen";
 import AddTaskScreen from "./src/screens/AddTaskScreen";
 import FriendsScreen from "./src/screens/FriendsScreen";
 import FriendRequestsScreen from "./src/screens/FriendRequestsScreen";
+import AgentChatScreen from "./src/screens/AgentChatScreen";
 import Icon from "react-native-vector-icons/Ionicons"; // Example: using Ionicons
 
 export type RootStackParamList = {
   TabNavigator: undefined;
   HomeScreen: undefined;
   ExploreScreen: undefined;
-  SocialScreen: undefined; // Keep this for the Stack.Screen inside SocialStack
+  SocialScreen: undefined;
   SettingsScreen: undefined;
   UserHobbies: undefined;
   UserTasks: undefined;
@@ -34,11 +35,11 @@ export type RootStackParamList = {
   onBoarding: undefined;
   Signup: undefined;
   Login: undefined;
-  FriendsScreen: undefined; // Keep for individual screen
-  FriendRequests: undefined; // Keep for individual screen
-  Social: undefined; // Add this for the SocialStack (tab)
+  FriendsScreen: undefined;
+  FriendRequests: undefined;
+  Social: undefined;
   Chats: { friendId: number; friendName: string; friendAvatar: string; };
-
+  Assistant: undefined;
 };
 
 export type SocialStackParamList = {
@@ -76,7 +77,7 @@ function MainTabNavigator() {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarIcon: ({ focused, color, size }) => {
-          let iconName: string | undefined; // Explicitly type iconName
+          let iconName: string | undefined;
 
           if (route.name === "Home") {
             iconName = focused ? "home" : "home-outline";
@@ -84,18 +85,13 @@ function MainTabNavigator() {
             iconName = focused ? "compass" : "compass-outline";
           } else if (route.name === "Social") {
             iconName = focused ? "people" : "people-outline";
-          } 
-          // else if (route.name === "Settings") {
-          //   iconName = focused ? "settings" : "settings-outline";
-          // }
-          // else if (route.name === 'Chats') {
-          //     iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
-          // }
+          } else if (route.name === "Assistant") {
+            iconName = focused ? "chatbubble-ellipses" : "chatbubble-ellipses-outline";
+          }
 
-          // Ensure iconName is always a string before passing to Icon
           return (
             <Icon name={iconName || "help-circle"} size={size} color={color} />
-          ); // Fallback icon
+          );
         },
         tabBarActiveTintColor: "tomato",
         tabBarInactiveTintColor: "gray",
@@ -104,8 +100,7 @@ function MainTabNavigator() {
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Explore" component={ExploreHobbiesScreen} />
       <Tab.Screen name="Social" component={SocialStackNavigator} />
-      {/* <Tab.Screen name="Chats" component={ChatStack} /> */}
-      {/* <Tab.Screen name="Settings" component={SettingsScreen} /> */}
+      <Tab.Screen name="Assistant" component={AgentChatScreen} />
     </Tab.Navigator>
   );
 }
@@ -157,16 +152,15 @@ const AppNavigator = () => {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!hasSeenIntro ? (
           <>
-          <Stack.Screen
-            name="onBoarding"
-            component={IntroductionAnimationScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Signup" component={SignupScreen} />
+            <Stack.Screen
+              name="onBoarding"
+              component={IntroductionAnimationScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Signup" component={SignupScreen} />
           </>
         ) : isLoggedIn ? (
-          // Logged-in screens
           <>
             <Stack.Screen name="TabNavigator" component={MainTabNavigator} />
             <Stack.Screen name="UserHobbies" component={UserHobbiesScreen} />
@@ -174,6 +168,7 @@ const AppNavigator = () => {
             <Stack.Screen name="AddUserTask" component={AddTaskScreen} />
             <Stack.Screen name="Chats" component={ChatScreen} />
             <Stack.Screen name="FriendsScreen" component={FriendsScreen} />
+            <Stack.Screen name="Assistant" component={AgentChatScreen} />
           </>
         ) : (
           <>
