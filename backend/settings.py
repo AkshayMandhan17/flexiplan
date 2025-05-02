@@ -11,21 +11,25 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-_^=!p_t)#o^!7phui2w%9_@h)=fho*=88bvwm0q@z-$d3c2*#n'
+SECRET_KEY = 'your-default-secret-key-here'
+
+# Google Gemini API Key
+# Get your API key from: https://makersuite.google.com/app/apikey
+GEMINI_API_KEY = "AIzaSyCFCSleVdgC4N-DE3K3L2ENTS7KR72kbSk"  # Replace this with the new API key from makersuite.google.com
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '192.168.100.6', '192.168.0.102', '10.0.2.174', '192.168.100.215']  # Add the IP address of your machine
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '192.168.100.6', '192.168.0.102', '10.0.2.174', '192.168.1.119', '192.168.100.189']  # Add the IP address of your machine
 
 GOOGLE_API_KEY= "AIzaSyBP2VOHu7uFsJ5kNxxWoyalLygStnRagQs"
 
@@ -40,12 +44,13 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt',
+    'corsheaders',
     'core',
-    'routine_setup',
-    'hobbies',
-    'social',
-    'channels',
     'chat',
+    'social',
+    'hobbies',
+    'routine_setup',
+    'agent',
 ]
 
 ASGI_APPLICATION = 'backend.asgi.application'
@@ -67,6 +72,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'backend.urls'
@@ -98,7 +104,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'flexiplan',
         'USER': 'postgres',
-        'PASSWORD': 'postgres',
+        'PASSWORD': 'superuser@flexiplan',
         'HOST': 'localhost',
         'PORT': '5432',
     }
