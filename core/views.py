@@ -1,10 +1,10 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from django.contrib.auth import authenticate
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Routine, Task, User, UserRoutine  # Import your custom User model
+from .models import Routine, RoutineActivityCompletion, Task, User, UserRoutine  # Import your custom User model
 from .serializers import SignupSerializer, LoginSerializer, TaskSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
@@ -111,17 +111,39 @@ class UserRoutineView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        """Returns the current primary routine for the logged-in user."""
         user = request.user
 
         try:
-            # Get the current primary routine for the user
-            user_routine = UserRoutine.objects.select_related('routine').filter(user=user, is_primary=True).first()
+            # Get the primary routine
+            user_routine = UserRoutine.objects.select_related('routine').filter(
+                user=user, 
+                is_primary=True
+            ).first()
 
-            if user_routine and user_routine.routine:
-                return Response({"routine_data": user_routine.routine.routine_data}, status=status.HTTP_200_OK)
-            else:
-                return Response({"error": "No primary routine found for this user."}, status=status.HTTP_404_NOT_FOUND)
+            if not user_routine or not user_routine.routine:
+                return Response({"error": "No primary routine found"}, status=status.HTTP_404_NOT_FOUND)
+
+            routine_data = user_routine.routine.routine_data.copy()
+
+            # Fetch all completion records for this user + routine
+            completions = RoutineActivityCompletion.objects.filter(
+                user=user,
+                routine=user_routine.routine
+            ).values('day', 'activity_name', 'is_completed')
+
+            # Convert to a lookup dictionary: {(day, activity_name) -> is_completed}
+            completion_status = {
+                (comp['day'], comp['activity_name']): comp['is_completed']
+                for comp in completions
+            }
+
+            # Add is_completed to each activity in the routine
+            for day, activities in routine_data.items():
+                for activity in activities:
+                    key = (day, activity['activity'])
+                    activity['is_completed'] = completion_status.get(key, False)
+
+            return Response({"routine_data": routine_data}, status=status.HTTP_200_OK)
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -143,3 +165,40 @@ class UploadUserPfp(APIView):
         user.save()
 
         return Response({"message": "Profile picture uploaded successfully!"}, status=status.HTTP_200_OK)
+
+class MarkActivityCompletedView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        day = request.data.get('day')  # e.g., "Monday"
+        activity_name = request.data.get('activity_name')  # e.g., "Office"
+        activity_type = request.data.get('activity_type')  # "task" or "hobby"
+        is_completed = request.data.get('is_completed', True)
+
+        try:
+            # Get the user's primary routine
+            user_routine = UserRoutine.objects.filter(user=user, is_primary=True).first()
+            if not user_routine:
+                return Response({"error": "No primary routine found"}, status=status.HTTP_404_NOT_FOUND)
+
+            # Update or create the completion record
+            completion, created = RoutineActivityCompletion.objects.update_or_create(
+                user=user,
+                routine=user_routine.routine,
+                day=day,
+                activity_name=activity_name,
+                activity_type=activity_type,
+                defaults={'is_completed': is_completed}
+            )
+
+            return Response({
+                "status": "success",
+                "is_completed": completion.is_completed,
+                "activity": activity_name,
+                "day": day
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

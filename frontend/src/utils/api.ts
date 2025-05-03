@@ -676,3 +676,66 @@ export const chatApi = {
     }
   }
 };
+
+export const markActivityCompleted = async (
+  day: string,
+  activityName: string,
+  activityType: 'task' | 'hobby',
+  isCompleted: boolean = true
+) => {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/api/mark-completed/`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        day,
+        activity_name: activityName,
+        activity_type: activityType,
+        is_completed: isCompleted
+      })
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || `HTTP error! Status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error: any) {
+    console.error("Error marking activity as completed:", error);
+    Alert.alert("Error", error.message || "Failed to mark activity as completed.");
+    throw error;
+  }
+};
+
+export const fetchRoutineAnalytics = async () => {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/api/routine/analytics/`, {
+      method: 'GET',
+      headers
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || `HTTP error! Status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      completion_analytics: data.completion_analytics,
+      time_analytics: data.time_analytics,
+      activity_frequency: data.activity_frequency,
+      weekly_patterns: data.weekly_patterns,
+      time_balance: data.time_balance,
+      consistency_score: data.consistency_score,
+      routine_period: data.routine_period
+    };
+  } catch (error: any) {
+    console.error("Error fetching routine analytics:", error);
+    Alert.alert("Error", error.message || "Failed to fetch routine analytics.");
+    throw error;
+  }
+};

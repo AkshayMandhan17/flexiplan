@@ -1,4 +1,5 @@
-from datetime import date, timedelta
+from collections import defaultdict
+from datetime import date, datetime, timedelta
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -6,7 +7,7 @@ import json
 import google.generativeai as genai
 from google.api_core import exceptions
 from django.conf import settings
-from core.models import Routine, Task, UserHobby, Hobby, UserRoutine, UserSetting
+from core.models import Routine, RoutineActivityCompletion, Task, UserHobby, Hobby, UserRoutine, UserSetting
 from django.contrib.auth import get_user_model
 import re  # ✅ Import the regular expression module
 from rest_framework.permissions import IsAuthenticated
@@ -263,3 +264,245 @@ class GenerateRoutineView(APIView):
             return Response({"error": f"Gemini API Error: {str(api_error)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as general_error:
             return Response({"error": str(general_error)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class EnhancedRoutineAnalyticsView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        try:
+            # Get the primary routine data from UserRoutineView response structure
+            user_routine = UserRoutine.objects.select_related('routine').filter(
+                user=user, 
+                is_primary=True
+            ).first()
+
+            if not user_routine or not user_routine.routine:
+                return Response({"error": "No primary routine found"}, status=status.HTTP_404_NOT_FOUND)
+
+            routine_data = user_routine.routine.routine_data.copy()
+
+            # Fetch all completion records
+            completions = RoutineActivityCompletion.objects.filter(
+                user=user,
+                routine=user_routine.routine
+            ).values('day', 'activity_name', 'is_completed')
+
+            # Convert to a lookup dictionary: {(day, activity_name) -> is_completed}
+            completion_status = {
+                (comp['day'], comp['activity_name']): comp['is_completed']
+                for comp in completions
+            }
+
+            # 1. Completion Rate Analytics
+            completion_analytics = {
+                'daily_completion_rates': defaultdict(dict),
+                'activity_completion_rates': defaultdict(dict),
+                'overall_completion_rate': {
+                    'completed': 0,
+                    'total': 0,
+                    'percentage': 0
+                },
+                'completion_by_activity_type': {
+                    'task': {'completed': 0, 'total': 0, 'percentage': 0},
+                    'hobby': {'completed': 0, 'total': 0, 'percentage': 0}
+                }
+            }
+
+            # 2. Time Allocation Analytics
+            time_analytics = {
+                'time_by_day': defaultdict(float),
+                'time_by_activity': defaultdict(float),
+                'time_by_type': {
+                    'task': 0.0,
+                    'hobby': 0.0
+                },
+                'average_daily_time': 0.0
+            }
+
+            # 3. Activity Frequency Analytics
+            activity_frequency = {
+                'most_frequent_activities': [],
+                'activities_by_day': defaultdict(list)
+            }
+
+            total_activities = 0
+            total_completed = 0
+            total_task_completed = 0
+            total_task_count = 0
+            total_hobby_completed = 0
+            total_hobby_count = 0
+
+            for day, activities in routine_data.items():
+                day_completed = 0
+                day_total = len(activities)
+                daily_time = 0.0
+
+                for activity in activities:
+                    total_activities += 1
+                    activity_name = activity['activity']
+                    activity_type = activity['type']
+                    
+                    # Calculate duration
+                    start_time = datetime.strptime(activity['start_time'], '%H:%M')
+                    end_time = datetime.strptime(activity['end_time'], '%H:%M')
+                    duration = float((end_time - start_time).total_seconds() / 3600)  # in hours
+                    
+                    # Time analytics
+                    time_analytics['time_by_day'][day] += duration
+                    time_analytics['time_by_activity'][activity_name] += duration
+                    time_analytics['time_by_type'][activity_type] += duration
+                    daily_time += duration
+                    
+                    # Activity frequency
+                    activity_frequency['activities_by_day'][day].append({
+                        'activity': activity_name,
+                        'type': activity_type,
+                        'duration': round(duration, 2)
+                    })
+                    
+                    # Completion status
+                    key = (day, activity_name)
+                    is_completed = completion_status.get(key, False)
+                    activity['is_completed'] = is_completed
+                    
+                    if is_completed:
+                        total_completed += 1
+                        day_completed += 1
+                        
+                        if activity_type == 'task':
+                            total_task_completed += 1
+                        else:
+                            total_hobby_completed += 1
+                    
+                    if activity_type == 'task':
+                        total_task_count += 1
+                    else:
+                        total_hobby_count += 1
+                
+                # Daily completion rate
+                completion_analytics['daily_completion_rates'][day] = {
+                    'completed': day_completed,
+                    'total': day_total,
+                    'percentage': round((day_completed / day_total * 100) if day_total > 0 else 0.0, 2)
+                }
+                
+                # Add daily time to time analytics
+                time_analytics['time_by_day'][day] = round(daily_time, 2)
+
+            # Calculate overall completion rates
+            if total_activities > 0:
+                completion_analytics['overall_completion_rate'] = {
+                    'completed': total_completed,
+                    'total': total_activities,
+                    'percentage': round((total_completed / total_activities) * 100, 2)
+                }
+                
+                completion_analytics['completion_by_activity_type']['task'] = {
+                    'completed': total_task_completed,
+                    'total': total_task_count,
+                    'percentage': round((total_task_completed / total_task_count * 100) if total_task_count > 0 else 0.0, 2)
+                }
+                
+                completion_analytics['completion_by_activity_type']['hobby'] = {
+                    'completed': total_hobby_completed,
+                    'total': total_hobby_count,
+                    'percentage': round((total_hobby_completed / total_hobby_count * 100) if total_hobby_count > 0 else 0.0, 2)
+                }
+
+            # Calculate activity completion rates
+            activity_completion_counts = defaultdict(lambda: {'completed': 0, 'total': 0})
+            for (day, activity_name), is_completed in completion_status.items():
+                activity_completion_counts[activity_name]['total'] += 1
+                if is_completed:
+                    activity_completion_counts[activity_name]['completed'] += 1
+
+            for activity, counts in activity_completion_counts.items():
+                completion_analytics['activity_completion_rates'][activity] = {
+                    'completed': counts['completed'],
+                    'total': counts['total'],
+                    'percentage': round((counts['completed'] / counts['total'] * 100) if counts['total'] > 0 else 0.0, 2)
+                }
+
+            # Calculate average daily time
+            if time_analytics['time_by_day']:
+                time_analytics['average_daily_time'] = round(
+                    float(sum(time_analytics['time_by_day'].values())) / float(len(time_analytics['time_by_day'])), 
+                    2
+                )
+
+            # Find most frequent activities (top 5 by time spent)
+            time_analytics['time_by_activity'] = dict(sorted(
+                time_analytics['time_by_activity'].items(), 
+                key=lambda item: item[1], 
+                reverse=True
+            ))
+            activity_frequency['most_frequent_activities'] = [
+                {'activity': k, 'total_hours': round(float(v), 2)} 
+                for k, v in list(time_analytics['time_by_activity'].items())[:5]
+            ]
+
+            # 4. Weekly Pattern Analysis
+            weekly_patterns = {
+                'most_busy_day': max(time_analytics['time_by_day'].items(), key=lambda x: x[1])[0] if time_analytics['time_by_day'] else None,
+                'least_busy_day': min(time_analytics['time_by_day'].items(), key=lambda x: x[1])[0] if time_analytics['time_by_day'] else None,
+                'day_with_most_activities': max(
+                    [(day, len(activities)) for day, activities in routine_data.items()], 
+                    key=lambda x: x[1]
+                )[0] if routine_data else None,
+                'day_with_least_activities': min(
+                    [(day, len(activities)) for day, activities in routine_data.items()], 
+                    key=lambda x: x[1]
+                )[0] if routine_data else None,
+            }
+
+            # 5. Time Balance Analysis
+            task_time = float(time_analytics['time_by_type']['task'])
+            hobby_time = float(time_analytics['time_by_type']['hobby'])
+            total_time = task_time + hobby_time
+
+            time_balance = {
+                'task_vs_hobby_ratio': {
+                    'task': round(task_time, 2),
+                    'hobby': round(hobby_time, 2),
+                    'ratio': round(task_time / hobby_time, 2) if hobby_time > 0 else 0.0
+                },
+                'work_life_balance_score': round(
+                    (hobby_time / total_time * 100) if total_time > 0 else 0.0, 
+                    2
+                )
+            }
+
+            # 6. Routine Consistency Score
+            consistency_score = {
+                'average_daily_completion': completion_analytics['overall_completion_rate']['percentage'],
+                'most_consistent_day': max(
+                    completion_analytics['daily_completion_rates'].items(), 
+                    key=lambda x: x[1]['percentage']
+                )[0] if completion_analytics['daily_completion_rates'] else None,
+                'least_consistent_day': min(
+                    completion_analytics['daily_completion_rates'].items(), 
+                    key=lambda x: x[1]['percentage']
+                )[0] if completion_analytics['daily_completion_rates'] else None,
+            }
+
+            # Prepare final response
+            analytics = {
+                'completion_analytics': completion_analytics,
+                'time_analytics': time_analytics,
+                'activity_frequency': activity_frequency,
+                'weekly_patterns': weekly_patterns,
+                'time_balance': time_balance,
+                'consistency_score': consistency_score,
+                'routine_period': {
+                    'start_date': user_routine.routine.start_date,
+                    'end_date': user_routine.routine.end_date
+                }
+            }
+
+            return Response(analytics, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
