@@ -115,3 +115,18 @@ class Friendship(models.Model):
         default="Pending"
     )
     created_at = models.DateTimeField(auto_now_add=True)
+
+class RoutineActivityCompletion(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    routine = models.ForeignKey(Routine, on_delete=models.CASCADE)
+    day = models.CharField(max_length=10)  # e.g., "Monday"
+    activity_name = models.CharField(max_length=255)  # e.g., "Office"
+    activity_type = models.CharField(max_length=50)  # "task" or "hobby"
+    is_completed = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)  # Tracks last update time
+
+    class Meta:
+        unique_together = ('user', 'routine', 'day', 'activity_name')  # No date needed
+
+    def __str__(self):
+        return f"{self.user.username} - {self.day} - {self.activity_name}"
