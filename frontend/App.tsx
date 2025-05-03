@@ -21,6 +21,7 @@ import AddTaskScreen from "./src/screens/AddTaskScreen";
 import FriendsScreen from "./src/screens/FriendsScreen";
 import FriendRequestsScreen from "./src/screens/FriendRequestsScreen";
 import AgentChatScreen from "./src/screens/AgentChatScreen";
+import AnalyticsScreen from "./src/screens/AnalyticsScreen";
 import Icon from "react-native-vector-icons/Ionicons"; // Example: using Ionicons
 
 export type RootStackParamList = {
@@ -40,6 +41,7 @@ export type RootStackParamList = {
   Social: undefined;
   Chats: { friendId: number; friendName: string; friendAvatar: string; };
   Assistant: undefined;
+  Analytics: undefined;
 };
 
 export type SocialStackParamList = {
@@ -87,6 +89,8 @@ function MainTabNavigator() {
             iconName = focused ? "people" : "people-outline";
           } else if (route.name === "Assistant") {
             iconName = focused ? "chatbubble-ellipses" : "chatbubble-ellipses-outline";
+          } else if (route.name === "Analytics") {
+            iconName = focused ? "chatbubble-ellipses" : "chatbubble-ellipses-outline";
           }
 
           return (
@@ -101,6 +105,7 @@ function MainTabNavigator() {
       <Tab.Screen name="Explore" component={ExploreHobbiesScreen} />
       <Tab.Screen name="Social" component={SocialStackNavigator} />
       <Tab.Screen name="Assistant" component={AgentChatScreen} />
+      <Tab.Screen name="Analytics" component={AnalyticsScreen} />
     </Tab.Navigator>
   );
 }
@@ -169,6 +174,7 @@ const AppNavigator = () => {
             <Stack.Screen name="Chats" component={ChatScreen} />
             <Stack.Screen name="FriendsScreen" component={FriendsScreen} />
             <Stack.Screen name="Assistant" component={AgentChatScreen} />
+            <Stack.Screen name="Analytics" component={AnalyticsScreen} />
           </>
         ) : (
           <>
