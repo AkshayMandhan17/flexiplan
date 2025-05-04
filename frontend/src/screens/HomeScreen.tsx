@@ -92,6 +92,44 @@ const HomeScreen = () => {
     { id: "2", name: "Jatin Routine", emoji: "😎", progress: 0 },
     { id: "3", name: "Fitness", emoji: "💪", progress: 0.7 },
   ]);
+  const analysisCategories = [
+    {
+      id: "1",
+      name: "Completion Analytics",
+      screen: "CompletionAnalytics",
+    },
+    {
+      id: "2",
+      name: "Time Analytics",
+      screen: "TimeAnalytics",
+    },
+    {
+      id: "3",
+      name: "Activity Frequency",
+      screen: "ActivityFrequency",
+    },
+    {
+      id: "4",
+      name: "Weekly Patterns",
+      screen: "WeeklyPatterns",
+    },
+    {
+      id: "5",
+      name: "Time Balance",
+      screen: "TimeBalance",
+    },
+    {
+      id: "6",
+      name: "Consistency Score",
+      screen: "ConsistencyScore",
+    },
+  ];
+
+  const handleCardPress = (item: any) => {
+    setActiveRoutine(item.id);
+    navigation.navigate(item.screen);
+  };
+
   const [activeRoutine, setActiveRoutine] = useState("1");
   const navigation = useNavigation<SettingsScreenContentNavigationProp>();
   const [username, setUsername] = useState<string>("");
@@ -641,17 +679,17 @@ const HomeScreen = () => {
       <ScrollView style={{ flex: 1 }}>
         <View style={{ height: 230 }}>
           <View style={styles.header}>
-            <Text style={styles.heading}>Routines</Text>
+            <Text style={styles.heading}>Routine Analysis</Text>
           </View>
           <FlatList
-            data={routines}
+            data={analysisCategories}
             horizontal
             keyExtractor={(item) => item.id}
             showsHorizontalScrollIndicator={false}
             renderItem={({ item }) => (
               <TouchableOpacity
                 activeOpacity={1}
-                onPress={() => setActiveRoutine(item.id)}
+                onPress={() => handleCardPress(item)}
               >
                 <View
                   style={[
@@ -659,18 +697,18 @@ const HomeScreen = () => {
                     activeRoutine === item.id && styles.activeRoutineCard,
                   ]}
                 >
-                  <View style={styles.avatar}>
+                  {/* <View style={styles.avatar}>
                     <Text style={styles.emoji}>{item.emoji}</Text>
-                  </View>
+                  </View> */}
                   <Text style={styles.routineName}>{item.name}</Text>
-                  <ProgressBar
+                  {/* <ProgressBar
                     progress={item.progress}
                     color="#76c7c0"
                     style={styles.progressBar}
-                  />
-                  <Text style={styles.progressText}>
+                  /> */}
+                  {/* <Text style={styles.progressText}>
                     {Math.round(item.progress * 100)}% Complete
-                  </Text>
+                  </Text> */}
                 </View>
               </TouchableOpacity>
             )}

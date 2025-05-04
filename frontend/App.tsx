@@ -24,6 +24,13 @@ import AgentChatScreen from "./src/screens/AgentChatScreen";
 import AnalyticsScreen from "./src/screens/AnalyticsScreen";
 import Icon from "react-native-vector-icons/Ionicons"; // Example: using Ionicons
 
+import ActivityFrequencyScreen from "./src/screens/RoutineAnalysis/ActivityFrequencyScreen";
+import CompletionAnalyticsScreen from "./src/screens/RoutineAnalysis/CompletionAnalyticsScreen";
+import TimeAnalyticsScreen from "./src/screens/RoutineAnalysis/TimeAnalyticsScreen";
+import TimeBalanceScreen from "./src/screens/RoutineAnalysis/TimeBalanceScreen";
+import ConsistencyScoreScreen from "./src/screens/RoutineAnalysis/ConsistencyScoreScreen";
+import WeeklyPatternsScreen from "./src/screens/RoutineAnalysis/WeeklyPatternsScreen";
+
 export type RootStackParamList = {
   TabNavigator: undefined;
   HomeScreen: undefined;
@@ -42,6 +49,12 @@ export type RootStackParamList = {
   Chats: { friendId: number; friendName: string; friendAvatar: string; };
   Assistant: undefined;
   Analytics: undefined;
+  CompletionAnalytics: undefined;
+  TimeAnalytics: undefined;
+  ActivityFrequency: undefined;
+  TimeBalance: undefined;
+  ConsistencyScore: undefined;
+  WeeklyPatterns: undefined;
 };
 
 export type SocialStackParamList = {
@@ -89,9 +102,10 @@ function MainTabNavigator() {
             iconName = focused ? "people" : "people-outline";
           } else if (route.name === "Assistant") {
             iconName = focused ? "chatbubble-ellipses" : "chatbubble-ellipses-outline";
-          } else if (route.name === "Analytics") {
-            iconName = focused ? "chatbubble-ellipses" : "chatbubble-ellipses-outline";
-          }
+          } 
+          // else if (route.name === "Analytics") {
+          //   iconName = focused ? "chatbubble-ellipses" : "chatbubble-ellipses-outline";
+          // }
 
           return (
             <Icon name={iconName || "help-circle"} size={size} color={color} />
@@ -105,7 +119,7 @@ function MainTabNavigator() {
       <Tab.Screen name="Explore" component={ExploreHobbiesScreen} />
       <Tab.Screen name="Social" component={SocialStackNavigator} />
       <Tab.Screen name="Assistant" component={AgentChatScreen} />
-      <Tab.Screen name="Analytics" component={AnalyticsScreen} />
+      {/* <Tab.Screen name="Analytics" component={AnalyticsScreen} /> */}
     </Tab.Navigator>
   );
 }
@@ -175,6 +189,12 @@ const AppNavigator = () => {
             <Stack.Screen name="FriendsScreen" component={FriendsScreen} />
             <Stack.Screen name="Assistant" component={AgentChatScreen} />
             <Stack.Screen name="Analytics" component={AnalyticsScreen} />
+            <Stack.Screen name="CompletionAnalytics" component={CompletionAnalyticsScreen} />
+            <Stack.Screen name="TimeAnalytics" component={TimeAnalyticsScreen} />
+            <Stack.Screen name="ActivityFrequency" component={ActivityFrequencyScreen} />
+            <Stack.Screen name="TimeBalance" component={TimeBalanceScreen} />
+            <Stack.Screen name="ConsistencyScore" component={ConsistencyScoreScreen} />
+            <Stack.Screen name="WeeklyPatterns" component={WeeklyPatternsScreen} />
           </>
         ) : (
           <>
