@@ -10,11 +10,17 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { chatApi } from '../utils/api';
 import { Message, SUGGESTED_MESSAGES } from '../utils/model';
 import { Ionicons } from '@expo/vector-icons';
+
+const { width } = Dimensions.get('window');
+const PRIMARY_COLOR = 'rgba(197, 110, 50, 1)';
+const AGENT_BG = '#f5f5f7';
+const USER_BG = PRIMARY_COLOR;
 
 const AgentChatScreen = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -78,14 +84,16 @@ const AgentChatScreen = () => {
   const renderMessage = ({ item }: { item: Message }) => (
     <View
       style={[
-        styles.messageContainer,
-        item.is_user ? styles.userMessage : styles.agentMessage,
+        styles.messageBubble,
+        item.is_user ? styles.userBubble : styles.agentBubble,
       ]}
     >
-      <Text style={[
-        styles.messageText,
-        item.is_user ? styles.userMessageText : styles.agentMessageText
-      ]}>
+      <Text
+        style={[
+          styles.messageText,
+          item.is_user ? styles.userText : styles.agentText,
+        ]}
+      >
         {item.content}
       </Text>
       <Text style={styles.timestamp}>
@@ -99,7 +107,7 @@ const AgentChatScreen = () => {
 
   const renderSuggestedMessage = ({ item }: { item: typeof SUGGESTED_MESSAGES[0] }) => (
     <TouchableOpacity
-      style={styles.suggestedMessageButton}
+      style={styles.suggestedMessageCard}
       onPress={() => handleSuggestedMessage(item.text)}
     >
       <Text style={styles.suggestedMessageText}>{item.text}</Text>
@@ -114,15 +122,15 @@ const AgentChatScreen = () => {
       </View>
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.flex}
       >
         <FlatList
           ref={flatListRef}
           data={messages}
           renderItem={renderMessage}
           keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
-          contentContainerStyle={styles.messagesList}
+          contentContainerStyle={styles.chatContainer}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
           ListEmptyComponent={
             <View style={styles.emptyState}>
@@ -153,18 +161,18 @@ const AgentChatScreen = () => {
             value={inputMessage}
             onChangeText={setInputMessage}
             placeholder="Type your message..."
-            placeholderTextColor="#666"
+            placeholderTextColor="#aaa"
             multiline
           />
           <TouchableOpacity
-            style={styles.sendButton}
+            style={[styles.sendButton, (!inputMessage.trim() || isLoading) && styles.sendButtonDisabled]}
             onPress={sendMessage}
             disabled={isLoading || !inputMessage.trim()}
           >
             {isLoading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Ionicons name="send" size={24} color="#fff" />
+              <Ionicons name="send" size={22} color="#fff" />
             )}
           </TouchableOpacity>
         </View>
@@ -174,117 +182,144 @@ const AgentChatScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#fdfcfa',
   },
   header: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    padding: 20,
+    backgroundColor: PRIMARY_COLOR,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 22,
+    color: '#fff',
+    fontWeight: '600',
     textAlign: 'center',
   },
-  keyboardAvoidingView: {
-    flex: 1,
-  },
-  messagesList: {
+  chatContainer: {
     padding: 16,
+    paddingBottom: 80,
   },
-  messageContainer: {
-    maxWidth: '80%',
+  messageBubble: {
+    borderRadius: 16,
     padding: 12,
-    borderRadius: 12,
-    marginBottom: 8,
+    marginBottom: 12,
+    maxWidth: width * 0.75,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  userMessage: {
+  userBubble: {
     alignSelf: 'flex-end',
-    backgroundColor: '#007AFF',
+    backgroundColor: USER_BG,
   },
-  agentMessage: {
+  agentBubble: {
     alignSelf: 'flex-start',
-    backgroundColor: '#F0F0F0',
+    backgroundColor: AGENT_BG,
   },
   messageText: {
     fontSize: 16,
+    lineHeight: 22,
   },
-  userMessageText: {
+  userText: {
     color: '#fff',
   },
-  agentMessageText: {
-    color: '#000',
+  agentText: {
+    color: '#222',
   },
   timestamp: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
+    fontSize: 11,
+    color: 'white',
+    marginTop: 6,
     alignSelf: 'flex-end',
   },
   inputContainer: {
     flexDirection: 'row',
+    alignItems: 'flex-end',
     padding: 16,
     borderTopWidth: 1,
     borderTopColor: '#eee',
-    alignItems: 'center',
+    backgroundColor: '#fff',
   },
   input: {
     flex: 1,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: '#f1f1f1',
     borderRadius: 20,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 8,
+    paddingVertical: 10,
+    fontSize: 15,
     maxHeight: 100,
   },
   sendButton: {
-    backgroundColor: '#007AFF',
-    width: 40,
-    height: 40,
+    marginLeft: 8,
+    backgroundColor: PRIMARY_COLOR,
     borderRadius: 20,
-    justifyContent: 'center',
+    width: 42,
+    height: 42,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendButtonDisabled: {
+    opacity: 0.6,
   },
   emptyState: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    padding: 32,
+    justifyContent: 'center',
+    marginTop: 100,
   },
   emptyStateText: {
     fontSize: 16,
-    color: '#666',
+    color: '#777',
     textAlign: 'center',
+    lineHeight: 24,
   },
   suggestedMessagesContainer: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
   },
   suggestedMessagesTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    color: '#333',
     marginBottom: 8,
   },
   suggestedMessagesList: {
-    paddingRight: 16,
+    paddingBottom: 10,
   },
-  suggestedMessageButton: {
-    backgroundColor: '#F0F0F0',
+  suggestedMessageCard: {
+    backgroundColor: '#fff',
+    borderColor: '#ddd',
+    borderWidth: 1,
+    borderRadius: 14,
     padding: 12,
-    borderRadius: 12,
-    marginRight: 8,
-    width: 200,
+    marginRight: 10,
+    width: 220,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
   },
   suggestedMessageText: {
-    fontSize: 14,
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontWeight: '600',
     marginBottom: 4,
+    color: PRIMARY_COLOR,
   },
   suggestedMessageDescription: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#666',
   },
 });
 
-export default AgentChatScreen; 
+export default AgentChatScreen;

@@ -685,7 +685,7 @@ export const markActivityCompleted = async (
 ) => {
   try {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/mark-completed/`, {
+    const response = await fetch(`${API_BASE_URL}/api/routine/mark-completed/`, {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -702,6 +702,7 @@ export const markActivityCompleted = async (
     }
 
     const data = await response.json();
+    // console.log(data);
     return data;
   } catch (error: any) {
     console.error("Error marking activity as completed:", error);

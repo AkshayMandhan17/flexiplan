@@ -28,7 +28,10 @@ import { RoutineData, UserRoutineResponse } from "../utils/model";
 import {
   fetchUserRoutines,
   generateRoutine,
+  markActivityCompleted,
   updateRoutine,
+  uploadUserPfp,
+  fetchPublicUserDetails,
 } from "../utils/api";
 import { createStackNavigator } from "@react-navigation/stack";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
@@ -37,8 +40,6 @@ import FriendsScreen from "./FriendsScreen"; // Make sure this path is correct
 
 import { Image, Modal } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { uploadUserPfp } from "../utils/api";
-import { fetchPublicUserDetails } from "../utils/api";
 import { API_BASE_URL } from "../config";
 
 const SettingsStack = createStackNavigator();
@@ -582,12 +583,38 @@ const HomeScreen = () => {
     }
   };
 
-  const toggleTask = (id: string) => {
-    setTasks((prev) =>
-      prev.map((task) =>
-        task.id === id ? { ...task, completed: !task.completed } : task
-      )
-    );
+  const toggleTask = async (id: string, emoji: string) => {
+    try {
+      // Find the task in the tasks array
+      const task = tasks.find((t) => t.id === id);
+      if (!task) return;
+
+      // Get the current day name based on currentDayIndex
+      const currentDayName =
+        daysOfWeek[(new Date().getDay() + currentDayIndex + 7) % 7];
+
+      // Determine activity type (default to 'task' if not specified)
+      const activityType = task.emoji === "🗓️" ? "task" : "hobby";
+
+      // Call the API to mark the activity as completed/uncompleted
+      await markActivityCompleted(
+        currentDayName,
+        task.name,
+        activityType,
+        !task.completed // Toggle the completed status
+      );
+
+      // Update local state only after successful API call
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.id === id ? { ...task, completed: !task.completed } : task
+        )
+      );
+    } catch (error) {
+      console.error("Error toggling task:", error);
+      // Optionally show an error message to the user
+      Alert.alert("Error", "Failed to update task status");
+    }
   };
 
   const removeTask = (id: string) => {
@@ -751,28 +778,33 @@ const HomeScreen = () => {
                 />
               </TouchableOpacity>
             </View>
-            {tasks.map((task) => (
-              <Swipeable
-                key={task.id}
-                renderRightActions={renderRightActions}
-                onSwipeableRightOpen={() => removeTask(task.id)}
-              >
-                <View style={styles.taskItem}>
-                  <View style={styles.taskAvatar}>
-                    <Text style={styles.taskEmoji}>{task.emoji}</Text>
-                  </View>
-                  <View style={styles.taskDetails}>
-                    <Text style={styles.taskName}>{task.name}</Text>
-                    <Text style={styles.taskTime}>{task.timeRange}</Text>
-                  </View>
-                  <Checkbox
-                    status={task.completed ? "checked" : "unchecked"}
-                    onPress={() => toggleTask(task.id)}
-                    color="#76c7c0"
-                  />
-                </View>
-              </Swipeable>
-            ))}
+            {tasks.map((task) => {
+              if (!task.completed) {
+                return (
+                  <Swipeable
+                    key={task.id}
+                    renderRightActions={renderRightActions}
+                    onSwipeableRightOpen={() => removeTask(task.id)}
+                  >
+                    <View style={styles.taskItem}>
+                      <View style={styles.taskAvatar}>
+                        <Text style={styles.taskEmoji}>{task.emoji}</Text>
+                      </View>
+                      <View style={styles.taskDetails}>
+                        <Text style={styles.taskName}>{task.name}</Text>
+                        <Text style={styles.taskTime}>{task.timeRange}</Text>
+                      </View>
+                      <Checkbox
+                        status={task.completed ? "checked" : "unchecked"}
+                        onPress={() => toggleTask(task.id, task.emoji)}
+                        color="#76c7c0"
+                      />
+                    </View>
+                  </Swipeable>
+                );
+              }
+              return null;
+            })}
           </View>
         )}
       </ScrollView>
