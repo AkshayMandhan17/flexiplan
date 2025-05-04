@@ -113,7 +113,7 @@ const NextButtonArrow: React.FC<Props> = ({ onBtnPress, animationController }) =
 const styles = StyleSheet.create({
   container: {
     height: 58,
-    backgroundColor: "rgb(21, 32, 54)",
+    backgroundColor: "rgba(197, 110, 50, 1)",
     overflow: "hidden",
   },
   signupContainer: {

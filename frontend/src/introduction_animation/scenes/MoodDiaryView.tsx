@@ -1,6 +1,6 @@
-import React, { useRef } from 'react';
-import { StyleSheet, Text, Animated, useWindowDimensions } from 'react-native';
-import { AppImages } from '../../../assets';
+import React, { useRef } from "react";
+import { StyleSheet, Text, Animated, useWindowDimensions } from "react-native";
+import { AppImages } from "../../../assets";
 
 interface Props {
   animationController: React.MutableRefObject<Animated.Value>;
@@ -36,13 +36,13 @@ const MoodDiaryView: React.FC<Props> = ({ animationController }) => {
       style={[styles.container, { transform: [{ translateX: slideAnim }] }]}
     >
       <Text style={styles.title} ref={careRef}>
-        Mood Dairy
+        Adaptive Routines
       </Text>
       <Animated.Text
         style={[styles.subtitle, { transform: [{ translateX: textAnim }] }]}
       >
-        Lorem ipsum dolor sit amet,consectetur adipiscing elit,sed do eiusmod
-        tempor incididunt ut labore
+        Life changes—and so does your plan. Flexiplan adjusts your schedule
+        intelligently to keep you on track.
       </Animated.Text>
       <Animated.Image
         style={[styles.image, { transform: [{ translateX: imageAnim }] }]}
@@ -54,22 +54,22 @@ const MoodDiaryView: React.FC<Props> = ({ animationController }) => {
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
-    alignItems: 'center',
+    alignItems: "center",
     paddingBottom: 100,
   },
   title: {
-    color: 'black',
+    color: "rgba(197, 110, 50, 1)",
     fontSize: 26,
-    textAlign: 'center',
-    fontFamily: 'WorkSans-Bold',
+    textAlign: "center",
+    fontFamily: "WorkSans-Bold",
   },
   subtitle: {
-    color: 'black',
-    textAlign: 'center',
-    fontFamily: 'WorkSans-Regular',
+    color: "rgba(197, 110, 50, 1)",
+    textAlign: "center",
+    fontFamily: "WorkSans-Regular",
     paddingHorizontal: 64,
     paddingVertical: 16,
   },

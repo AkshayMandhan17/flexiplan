@@ -31,7 +31,7 @@ const DotIndicator: React.FC<DotIndicatorProps> = ({
 
   const bgColor = activeIndexRef.current.interpolate({
     inputRange: [0, 1],
-    outputRange: ['#E3E4E4', '#132137'],
+    outputRange: ['#E3E4E4', 'rgba(197, 110, 50, 1)'],
   });
 
   return (
@@ -121,7 +121,7 @@ const CenterNextButton: React.FC<Props> = ({
           { transform: [{ translateY: loginTextMoveAnimation }] },
         ]}
       >
-        <Text style={{ color: 'grey', fontFamily: 'WorkSans-Regular' }}>
+        <Text style={{ color: 'rgba(197, 110, 50, 0.7)', fontFamily: 'WorkSans-Regular' }}>
           Already have an account?{' '}
         </Text>
         <TouchableOpacity onPress={() => navigation.navigate("Login")}>
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   loginText: {
-    color: '#132137',
+    color: 'rgba(197, 110, 50, 1)',
     fontSize: 16,
     fontFamily: 'WorkSans-Bold',
   },

@@ -407,18 +407,23 @@ const HomeScreen = () => {
           onRequestClose={() => setShowPopup(false)}
         >
           <TouchableOpacity
-            style={{flex: 1,
-              justifyContent: 'center',
-              alignItems: 'center',
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',}}
+            style={{
+              flex: 1,
+              justifyContent: "center",
+              alignItems: "center",
+              backgroundColor: "rgba(0, 0, 0, 0.5)",
+            }}
             activeOpacity={1}
             onPress={() => setShowPopup(false)}
           >
-            <View style={{backgroundColor: 'transparent',
-  padding: 20,
-  width: '100%',
-  alignItems: 'center',
-}}>
+            <View
+              style={{
+                backgroundColor: "transparent",
+                padding: 20,
+                width: "100%",
+                alignItems: "center",
+              }}
+            >
               <TouchableOpacity
                 style={styles.popupOption}
                 onPress={() => {
@@ -447,17 +452,19 @@ const HomeScreen = () => {
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <TouchableOpacity style={styles.menuItem} onPress={item.action}>
-              {item.IconFamily === "FontAwesome" ? (
-                <FontAwesome name={item.IconName} size={24} color="white" />
-              ) : item.IconFamily === "FontAwesome5" ? (
-                <FontAwesome5 name={item.IconName} size={24} color="white" />
-              ) : item.IconFamily === "MaterialIcons" ? (
-                <MaterialIcons name={item.IconName} size={24} color="white" />
-              ) : item.IconFamily === "Ionicons" ? (
-                <Ionicons name={item.IconName} size={24} color="white" />
-              ) : item.IconFamily === "Icon" ? (
-                <Icon name={item.IconName} size={24} color="white" />
-              ) : null}
+              <View style={{ width: 33, alignItems: "center" }}>
+                {item.IconFamily === "FontAwesome" ? (
+                  <FontAwesome name={item.IconName} size={24} color="white" />
+                ) : item.IconFamily === "FontAwesome5" ? (
+                  <FontAwesome5 name={item.IconName} size={24} color="white" />
+                ) : item.IconFamily === "MaterialIcons" ? (
+                  <MaterialIcons name={item.IconName} size={24} color="white" />
+                ) : item.IconFamily === "Ionicons" ? (
+                  <Ionicons name={item.IconName} size={24} color="white" />
+                ) : item.IconFamily === "Icon" ? (
+                  <Icon name={item.IconName} size={24} color="white" />
+                ) : null}
+              </View>
               <Text style={styles.menuText}>{item.title}</Text>
             </TouchableOpacity>
           )}

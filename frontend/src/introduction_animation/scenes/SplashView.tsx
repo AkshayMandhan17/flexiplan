@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   StyleSheet,
   View,
@@ -7,10 +7,10 @@ import {
   Animated,
   useWindowDimensions,
   ScrollView,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import MyPressable from '../../components/MyPressable';
-import { AppImages } from '../../../assets';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import MyPressable from "../../components/MyPressable";
+import { AppImages } from "../../../assets";
 
 interface Props {
   onNextClick: () => void;
@@ -47,8 +47,8 @@ const SplashView: React.FC<Props> = ({ onNextClick, animationController }) => {
         </View>
         <Text style={styles.title}>Clearhead</Text>
         <Text style={styles.subtitle}>
-          Lorem ipsum dolor sit amet,consectetur{'\n'}adipiscing elit,sed do
-          eiusmod tempor{'\n'}incididunt ut labore
+          Start your journey with a calm and focused mind. Flexiplan helps you
+          organize thoughts and set{'\n'} clear intentions for the day.
         </Text>
       </ScrollView>
 
@@ -56,7 +56,7 @@ const SplashView: React.FC<Props> = ({ onNextClick, animationController }) => {
         <View style={styles.buttonContainer}>
           <MyPressable
             style={styles.button}
-            android_ripple={{ color: 'powderblue' }}
+            android_ripple={{ color: "powderblue" }}
             touchOpacity={0.6}
             onPress={() => onNextClick()}
           >
@@ -70,38 +70,38 @@ const SplashView: React.FC<Props> = ({ onNextClick, animationController }) => {
 
 const styles = StyleSheet.create({
   title: {
-    color: 'black',
+    color: "rgba(197, 110, 50, 1)",
     fontSize: 25,
-    textAlign: 'center',
-    fontFamily: 'WorkSans-Bold',
+    textAlign: "center",
+    fontFamily: "WorkSans-Bold",
     paddingVertical: 8,
   },
   subtitle: {
-    color: 'black',
-    textAlign: 'center',
-    fontFamily: 'WorkSans-Regular',
+    color: "rgba(197, 110, 50, 1)",
+    textAlign: "center",
+    fontFamily: "WorkSans-Regular",
     paddingHorizontal: 24,
   },
   footer: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingTop: 8,
   },
   buttonContainer: {
     borderRadius: 38,
-    overflow: 'hidden',
-    alignSelf: 'center',
+    overflow: "hidden",
+    alignSelf: "center",
   },
   button: {
     height: 58,
-    backgroundColor: 'rgb(21, 32, 54)',
+    backgroundColor: "rgba(197, 110, 50, 1)",
     paddingVertical: 16,
     paddingHorizontal: 56,
   },
   buttonText: {
     fontSize: 18,
-    fontFamily: 'WorkSans-Regular',
-    color: 'white',
+    fontFamily: "WorkSans-Regular",
+    color: "white",
   },
 });
 

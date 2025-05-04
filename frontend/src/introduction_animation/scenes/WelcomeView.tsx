@@ -46,7 +46,7 @@ const WelcomeView: React.FC<Props> = ({ animationController }) => {
         Welcome
       </Animated.Text>
       <Text style={styles.subtitle}>
-        Stay organised and live stress-free with you-do app
+        Stay organised and live stress-free with Flexiplan app
       </Text>
     </Animated.View>
   );
@@ -65,13 +65,13 @@ const styles = StyleSheet.create({
     maxHeight: IMAGE_HEIGHT,
   },
   title: {
-    color: 'black',
+    color: 'rgba(197, 110, 50, 1)',
     fontSize: 26,
     textAlign: 'center',
     fontFamily: 'WorkSans-Bold',
   },
   subtitle: {
-    color: 'black',
+    color: 'rgba(197, 110, 50, 1)',
     textAlign: 'center',
     fontFamily: 'WorkSans-Regular',
     paddingHorizontal: 64,

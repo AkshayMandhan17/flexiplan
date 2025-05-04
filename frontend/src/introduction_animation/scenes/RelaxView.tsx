@@ -1,6 +1,6 @@
-import React, { useRef } from 'react';
-import { StyleSheet, Text, Animated, useWindowDimensions } from 'react-native';
-import { AppImages } from '../../../assets';
+import React, { useRef } from "react";
+import { StyleSheet, Text, Animated, useWindowDimensions } from "react-native";
+import { AppImages } from "../../../assets";
 
 interface Props {
   animationController: React.MutableRefObject<Animated.Value>;
@@ -39,13 +39,13 @@ const RelaxView: React.FC<Props> = ({ animationController }) => {
         style={[styles.title, { transform: [{ translateY: relaxAnimation }] }]}
         ref={relaxRef}
       >
-        Relax
+        Smart Planning
       </Animated.Text>
       <Animated.Text
         style={[styles.subtitle, { transform: [{ translateX: textAnim }] }]}
       >
-        Lorem ipsum dolor sit amet,consectetur adipiscing elit,sed do eiusmod
-        tempor incididunt ut labore
+        Let AI do the thinking. Flexiplan creates personalized routines tailored
+        to your lifestyle and goals.
       </Animated.Text>
       <Animated.Image
         style={[styles.image, { transform: [{ translateX: imageAnim }] }]}
@@ -57,19 +57,19 @@ const RelaxView: React.FC<Props> = ({ animationController }) => {
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingBottom: 100,
   },
   title: {
-    color: 'black',
+    color: "rgba(197, 110, 50, 1)",
     fontSize: 26,
-    textAlign: 'center',
-    fontFamily: 'WorkSans-Bold',
+    textAlign: "center",
+    fontFamily: "WorkSans-Bold",
   },
   subtitle: {
-    color: 'black',
-    textAlign: 'center',
-    fontFamily: 'WorkSans-Regular',
+    color: "rgba(197, 110, 50, 1)",
+    textAlign: "center",
+    fontFamily: "WorkSans-Regular",
     paddingHorizontal: 64,
     paddingVertical: 16,
   },
