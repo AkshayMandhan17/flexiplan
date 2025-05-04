@@ -3,7 +3,7 @@ from langchain.tools import BaseTool
 from core.models import Task, Hobby, UserHobby
 from django.contrib.auth import get_user_model
 from pydantic import BaseModel, Field
-
+from django.utils.dateparse import parse_duration, parse_time
 User = get_user_model()
 
 class TaskInput(BaseModel):
@@ -25,17 +25,29 @@ class CreateTaskTool(BaseTool):
     def _run(self, user_id: int, task_data: Dict[str, Any]) -> str:
         try:
             user = User.objects.get(pk=user_id)
-            task = Task.objects.create(
+            
+            # Convert duration string to timedelta
+            time_required = parse_duration(task_data['time_required'])
+            if not time_required:
+                raise ValueError("Invalid time_required format. Use HH:MM:SS")
+                
+            # Handle optional fixed_time_slot
+            fixed_time_slot = None
+            if task_data.get('fixed_time_slot'):
+                fixed_time_slot = parse_time(task_data['fixed_time_slot'])
+                if not fixed_time_slot:
+                    raise ValueError("Invalid fixed_time_slot format. Use HH:MM:SS")
+
+            Task.objects.create(
                 user=user,
                 task_name=task_data['task_name'],
-                description=task_data.get('description', ''),
-                time_required=task_data['time_required'],
+                time_required=time_required,
                 days_associated=task_data['days_associated'],
                 priority=task_data['priority'],
                 is_fixed_time=task_data['is_fixed_time'],
-                fixed_time_slot=task_data.get('fixed_time_slot')
+                fixed_time_slot=fixed_time_slot
             )
-            return f"Task '{task.task_name}' created successfully!"
+            return f"Task '{task_data['task_name']}' created successfully!"
         except Exception as e:
             return f"Error creating task: {str(e)}"
 
