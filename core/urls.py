@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import MarkActivityCompletedView, SignupView, LoginView, UserRoutineView, UserTaskDetailView, UserTasksView, UploadUserPfp
+from .views import MarkActivityCompletedView, RemoveActivityFromRoutineView, SignupView, LoginView, UserRoutineView, UserTaskDetailView, UserTasksView, UploadUserPfp
 
 urlpatterns = [
     path('signup/', SignupView.as_view(), name='signup'),
@@ -9,4 +9,5 @@ urlpatterns = [
     path('user-routine/', UserRoutineView.as_view(), name='user-routines'),
     path('upload-pfp/', UploadUserPfp.as_view(), name='upload-profile-picture'),
     path('routine/mark-completed/', MarkActivityCompletedView.as_view(), name='mark-activity-completed'),
+    path('routine/remove-activity/', RemoveActivityFromRoutineView.as_view(), name='remove-activity-from-routine'),
 ]

@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from core.models import User, Friendship
+from core.models import RoutineActivityCompletion, User, Friendship, UserRoutine
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.shortcuts import get_object_or_404
@@ -155,3 +155,73 @@ class ViewFriendRequestsView(APIView):
         friend_requests = Friendship.objects.filter(friend=request.user, status="Pending")
         serializer = FriendshipSerializer(friend_requests, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+class FriendRoutineView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, friend_id):
+        """
+        View a friend's routine
+        Parameters:
+        - friend_id: ID of the friend whose routine you want to view
+        """
+        try:
+            # Verify friendship exists and is accepted
+            friendship = Friendship.objects.filter(
+                (models.Q(user=request.user, friend_id=friend_id) | 
+                 models.Q(friend=request.user, user_id=friend_id)),
+                status="Accepted"
+            ).first()
+
+            if not friendship:
+                return Response(
+                    {"error": "You are not friends with this user or friendship not accepted"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            # Get the friend's user object
+            friend = friendship.friend if friendship.user == request.user else friendship.user
+
+            # Get the friend's primary routine
+            user_routine = UserRoutine.objects.select_related('routine').filter(
+                user=friend, 
+                is_primary=True
+            ).first()
+
+            if not user_routine or not user_routine.routine:
+                return Response(
+                    {"error": "Friend has no primary routine"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            routine_data = user_routine.routine.routine_data.copy()
+
+            # Fetch all completion records for this friend's routine
+            completions = RoutineActivityCompletion.objects.filter(
+                user=friend,
+                routine=user_routine.routine
+            ).values('day', 'activity_name', 'is_completed')
+
+            # Convert to a lookup dictionary: {(day, activity_name) -> is_completed}
+            completion_status = {
+                (comp['day'], comp['activity_name']): comp['is_completed']
+                for comp in completions
+            }
+
+            # Add is_completed to each activity in the routine
+            for day, activities in routine_data.items():
+                for activity in activities:
+                    key = (day, activity['activity'])
+                    activity['is_completed'] = completion_status.get(key, False)
+
+            return Response({
+                "friend_id": friend.id,
+                "friend_username": friend.username,
+                "friend_name": f"{friend.first_name} {friend.last_name}",
+                "profile_picture": friend.profile_picture.url if friend.profile_picture else None,
+                "routine_data": routine_data
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

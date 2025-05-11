@@ -202,3 +202,76 @@ class MarkActivityCompletedView(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class RemoveActivityFromRoutineView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        day = request.data.get('day')  # e.g., "Monday"
+        activity_name = request.data.get('activity_name')  # e.g., "Office"
+        activity_type = request.data.get('activity_type')  # "task" or "hobby"
+
+        try:
+            # Get the user's primary routine with related Routine
+            user_routine = UserRoutine.objects.select_related('routine').filter(
+                user=user, 
+                is_primary=True
+            ).first()
+            
+            if not user_routine or not user_routine.routine:
+                return Response({"error": "No primary routine found"}, status=status.HTTP_404_NOT_FOUND)
+
+            # Get the routine data from the related Routine model
+            routine = user_routine.routine
+            routine_data = routine.routine_data.copy()  # Create a copy to modify
+
+            # Check if the day exists in the routine
+            if day not in routine_data:
+                return Response({"error": f"Day '{day}' not found in routine"}, status=status.HTTP_404_NOT_FOUND)
+
+            # Find and remove the activity
+            activities = routine_data[day]
+            original_count = len(activities)
+            
+            # Filter out the activity to remove (case insensitive comparison)
+            updated_activities = [
+                activity for activity in activities 
+                if not (
+                    str(activity['type']).lower() == activity_type.lower() and 
+                    str(activity['activity']).lower() == activity_name.lower()
+                )
+            ]
+            
+            # Check if anything was removed
+            if len(updated_activities) == original_count:
+                return Response({
+                    "error": f"Activity '{activity_name}' of type '{activity_type}' not found on {day}"
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Update the routine data and save
+            routine_data[day] = updated_activities
+            routine.routine_data = routine_data
+            routine.save()
+            
+            # Also delete any completion records for this activity
+            RoutineActivityCompletion.objects.filter(
+                user=user,
+                routine=routine,
+                day=day,
+                activity_name=activity_name,
+                activity_type=activity_type
+            ).delete()
+
+            return Response({
+                "status": "success",
+                "message": f"{activity_type} '{activity_name}' removed from {day}",
+                "day": day,
+                "activity_name": activity_name,
+                "activity_type": activity_type,
+                "remaining_activities": updated_activities
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

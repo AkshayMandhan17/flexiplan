@@ -740,3 +740,62 @@ export const fetchRoutineAnalytics = async () => {
     throw error;
   }
 };
+
+export const removeActivityFromRoutine = async (
+  day: string,
+  activityName: string,
+  activityType: 'task' | 'hobby'
+) => {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/api/routine/remove-activity/`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        day,
+        activity_name: activityName,
+        activity_type: activityType
+      })
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || `HTTP error! Status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error: any) {
+    console.error("Error removing activity from routine:", error);
+    Alert.alert("Error", error.message || "Failed to remove activity from routine.");
+    throw error;
+  }
+};
+
+export const fetchFriendRoutine = async (friendId: number) => {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/api/friends/${friendId}/routine/`, {
+      method: 'GET',
+      headers
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || `HTTP error! Status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      friend_id: data.friend_id,
+      friend_username: data.friend_username,
+      friend_name: data.friend_name,
+      profile_picture: data.profile_picture,
+      routine_data: data.routine_data
+    };
+  } catch (error: any) {
+    console.error("Error fetching friend's routine:", error);
+    Alert.alert("Error", error.message || "Failed to fetch friend's routine.");
+    throw error;
+  }
+};

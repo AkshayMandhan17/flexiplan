@@ -24,8 +24,8 @@ SECRET_KEY = 'your-default-secret-key-here'
 
 # Google Gemini API Key
 # Get your API key from: https://makersuite.google.com/app/apikey
-GEMINI_API_KEY = "AIzaSyCFCSleVdgC4N-DE3K3L2ENTS7KR72kbSk"  # Replace this with the new API key from makersuite.google.com
-
+# GEMINI_API_KEY = "AIzaSyCFCSleVdgC4N-DE3K3L2ENTS7KR72kbSk"  # Replace this with the new API key from makersuite.google.com
+GEMINI_API_KEY = "AIzaSyC4wEvsWP8aRYD_GxdgL68fEAfWhUIUcSs" #Ritesh's API key
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
