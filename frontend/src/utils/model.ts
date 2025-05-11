@@ -44,6 +44,7 @@ export interface Activity {
   activity: string;
   end_time: string;
   start_time: string;
+  is_completed: any;
 }
 
 export interface RoutineData {

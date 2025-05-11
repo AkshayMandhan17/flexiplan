@@ -49,7 +49,7 @@ type RootStackParamList = {
   SettingsContent: undefined;
   UserHobbies: undefined;
   UserTasks: undefined;
-  Login: undefined; //  Important if you navigate to Login on logout
+  Login: undefined;
   FriendsScreen: undefined;
 };
 
@@ -68,14 +68,12 @@ type User = {
 
 const HomeScreen = () => {
   const [profilePic, setProfilePic] = useState<string | null>(null);
-  const [showPopup, setShowPopup] = useState(false); // To control popup visibility
+  const [showPopup, setShowPopup] = useState(false);
   const tabBarHeight = useBottomTabBarHeight();
   const [isSidebarVisible, setSidebarVisible] = useState(false);
   const [sidebarAnimation] = useState(new Animated.Value(250));
-  const [weeklyRoutineData, setWeeklyRoutineData] =
-    useState<RoutineData | null>(null);
-  const [routineLoadingError, setRoutineLoadingError] =
-    useState<boolean>(false);
+  const [weeklyRoutineData, setWeeklyRoutineData] = useState<RoutineData | null>(null);
+  const [routineLoadingError, setRoutineLoadingError] = useState<boolean>(false);
   const [currentDayIndex, setCurrentDayIndex] = useState<number>(0); // 0 for today, -1 for yesterday, 1 for tomorrow, etc.
   const daysOfWeek = [
     "Sunday",
@@ -87,12 +85,7 @@ const HomeScreen = () => {
     "Saturday",
   ];
   const [tasks, setTasks] = useState<any[]>([]); // Tasks for the current day
-  const [routines, setRoutines] = useState([
-    // Static routines data
-    { id: "1", name: "This Week", emoji: "☀️", progress: 0.4 },
-    { id: "2", name: "Jatin Routine", emoji: "😎", progress: 0 },
-    { id: "3", name: "Fitness", emoji: "💪", progress: 0.7 },
-  ]);
+
   const analysisCategories = [
     {
       id: "1",
@@ -537,34 +530,35 @@ const HomeScreen = () => {
     </Animated.View>
   );
 
-  useEffect(() => {
-    const fetchRoutine = async () => {
-      const data = await fetchUserRoutines();
-      if (data && data.routine_data) {
-        // Check if data and routine_data exist
-        setWeeklyRoutineData(data.routine_data);
-        setRoutineLoadingError(false); // Reset error state if successful
-      } else {
-        setWeeklyRoutineData(null); // Explicitly set to null if no data
-        setRoutineLoadingError(true); // Set error state
-      }
-      // if data.error -> alert that user routine not found
-    };
+  const fetchRoutine = async () => {
+    const data = await fetchUserRoutines();
+    // console.log(JSON.stringify(data, null, 2));
+    if (data && data.routine_data) {
+      // Check if data and routine_data exist
+      setWeeklyRoutineData(data.routine_data);
+      setRoutineLoadingError(false); // Reset error state if successful
+    } else {
+      setWeeklyRoutineData(null); // Explicitly set to null if no data
+      setRoutineLoadingError(true); // Set error state
+    }
+    // if data.error -> alert that user routine not found
+  };
 
+  useEffect(() => {
     fetchRoutine();
   }, []);
 
   useEffect(() => {
     if (weeklyRoutineData) {
-      const currentDayName =
-        daysOfWeek[(new Date().getDay() + currentDayIndex + 7) % 7]; // Ensure positive index
+      const currentDayName = daysOfWeek[(new Date().getDay() + currentDayIndex + 7) % 7]; // Ensure positive index
       const dailyTasks = weeklyRoutineData[currentDayName] || [];
+      // console.log(JSON.stringify(dailyTasks, null, 2));
       const formattedTasks = dailyTasks.map((task, index) => ({
         id: String(index), // Or generate a more unique ID if needed
         name: task.activity,
         emoji: getEmojiForType(task.type), // Function to determine emoji based on task type
         timeRange: `${task.start_time} - ${task.end_time}`,
-        completed: false, // Initially set to false
+        completed: task.is_completed,
       }));
       setTasks(formattedTasks);
     }
@@ -603,6 +597,8 @@ const HomeScreen = () => {
         activityType,
         !task.completed // Toggle the completed status
       );
+
+      fetchRoutine();
 
       // Update local state only after successful API call
       setTasks((prev) =>
