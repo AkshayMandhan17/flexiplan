@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   Image,
   StyleSheet,
   Alert,
-} from 'react-native';
+} from "react-native";
 import {
   fetchUsers,
   fetchFriendshipDetails,
@@ -16,16 +16,20 @@ import {
   fetchFriendRequests,
   respondToFriendRequest,
   fetchPublicUserDetails,
-} from '../utils/api';
-import { User, FriendRequest } from '../utils/model';
-import { useIsFocused } from '@react-navigation/native';
+} from "../utils/api";
+import { User, FriendRequest } from "../utils/model";
+import { useIsFocused } from "@react-navigation/native";
 
 const SocialTab = ({ navigation }: any) => {
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [friendshipStatuses, setFriendshipStatuses] = useState<{ [key: number]: string }>({});
-  const [activeTab, setActiveTab] = useState<'findFriends' | 'requests'>('findFriends');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [friendshipStatuses, setFriendshipStatuses] = useState<{
+    [key: number]: string;
+  }>({});
+  const [activeTab, setActiveTab] = useState<"findFriends" | "requests">(
+    "findFriends"
+  );
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const isFocused = useIsFocused();
 
@@ -37,7 +41,7 @@ const SocialTab = ({ navigation }: any) => {
         setFilteredUsers(data);
         // console.log(data);
       } catch (error) {
-        console.error('Failed to load users:', error);
+        console.error("Failed to load users:", error);
       }
     };
 
@@ -52,7 +56,7 @@ const SocialTab = ({ navigation }: any) => {
 
         setFriendshipStatuses(statusMap);
       } catch (error) {
-        console.error('Failed to load friendship statuses:', error);
+        console.error("Failed to load friendship statuses:", error);
       }
     };
 
@@ -62,14 +66,14 @@ const SocialTab = ({ navigation }: any) => {
         setFriendRequests(data);
         //console.log(data);
       } catch (error) {
-        console.error('Failed to load friend requests:', error);
+        console.error("Failed to load friend requests:", error);
       }
     };
 
     if (isFocused) {
       loadUsers();
       loadFriendshipStatuses();
-      if (activeTab === 'requests') {
+      if (activeTab === "requests") {
         loadFriendRequests();
       }
     }
@@ -87,24 +91,32 @@ const SocialTab = ({ navigation }: any) => {
   const handleSendRequest = async (friendId: number) => {
     try {
       await sendFriendRequest(friendId);
-      setFriendshipStatuses((prev) => ({ ...prev, [friendId]: 'Pending' }));
+      setFriendshipStatuses((prev) => ({ ...prev, [friendId]: "Pending" }));
     } catch (error) {
-      console.error('Failed to send friend request:', error);
+      console.error("Failed to send friend request:", error);
     }
   };
 
-  const handleRespondToRequest = async (requestId: number, action: 'Accept' | 'Reject') => {
+  const handleRespondToRequest = async (
+    requestId: number,
+    action: "Accept" | "Reject"
+  ) => {
     try {
       await respondToFriendRequest(requestId, action);
       // Update the friend requests list
       setFriendRequests((prev) =>
         prev.map((request) =>
-          request.id === requestId ? { ...request, status: action === 'Accept' ? 'Accepted' : 'Rejected' } : request
+          request.id === requestId
+            ? {
+                ...request,
+                status: action === "Accept" ? "Accepted" : "Rejected",
+              }
+            : request
         )
       );
     } catch (error) {
-      console.error('Failed to respond to friend request:', error);
-      Alert.alert('Error', 'Failed to respond to friend request.');
+      console.error("Failed to respond to friend request:", error);
+      Alert.alert("Error", "Failed to respond to friend request.");
     }
   };
 
@@ -125,9 +137,9 @@ const SocialTab = ({ navigation }: any) => {
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => {
           //console.log(item);
-          return(
+          return (
             <View style={styles.listItem}>
-            <Image
+              <Image
                 source={
                   item.profile_picture
                     ? { uri: item.profile_picture }
@@ -136,24 +148,41 @@ const SocialTab = ({ navigation }: any) => {
                 style={styles.avatar}
               />
 
-            <View style={styles.textContainer}>
-              <Text style={styles.name}>{item.first_name} {item.last_name}</Text>
-              {/* <Text style={styles.lastMessage}>no messages yet</Text> */}
-            </View>
+              <View style={styles.textContainer}>
+                <Text style={styles.name}>
+                  {item.first_name} {item.last_name}
+                </Text>
+                {/* <Text style={styles.lastMessage}>no messages yet</Text> */}
+              </View>
 
-            <TouchableOpacity
-              style={[
-                styles.addButton,
-                { backgroundColor: friendshipStatuses[item.id] === 'Pending' ? 'rgba(40, 29, 17, 0.9)' : 'rgba(197, 110, 50, 0.9)' },
-              ]}
-              onPress={() => handleSendRequest(item.id)}
-              disabled={friendshipStatuses[item.id] === 'Pending'}
-            >
-              <Text style={{ color: '#FFF', textAlign:'center' }}>
-                {friendshipStatuses[item.id] === 'Pending' ? 'Pending' : 'Add'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+              {friendshipStatuses[item.id] === "Accepted" ? (
+                <View style={[styles.addButton, { backgroundColor: "gray" }]}>
+                  <Text style={{ color: "#FFF", textAlign: "center" }}>
+                    Friends
+                  </Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[
+                    styles.addButton,
+                    {
+                      backgroundColor:
+                        friendshipStatuses[item.id] === "Pending"
+                          ? "rgba(40, 29, 17, 0.9)"
+                          : "rgba(197, 110, 50, 0.9)",
+                    },
+                  ]}
+                  onPress={() => handleSendRequest(item.id)}
+                  disabled={friendshipStatuses[item.id] === "Pending"}
+                >
+                  <Text style={{ color: "#FFF", textAlign: "center" }}>
+                    {friendshipStatuses[item.id] === "Pending"
+                      ? "Pending"
+                      : "Add"}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
           );
         }}
         contentContainerStyle={styles.listContainer}
@@ -171,42 +200,50 @@ const SocialTab = ({ navigation }: any) => {
         data={friendRequests}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => {
-        //  console.log(item);
+          //  console.log(item);
           return (
             <View style={styles.listItem}>
               <Image
-                      source={
-                        item.profile_picture
-                          ? { uri: item.profile_picture }
-                          : require("../../assets/default_user.jpg")
-                      }
-                      style={styles.avatar}
-                    />
-            {/* <Image source={{ uri: 'https://via.placeholder.com/50' }} style={styles.avatar} /> */}
+                source={
+                  item.profile_picture
+                    ? { uri: item.profile_picture }
+                    : require("../../assets/default_user.jpg")
+                }
+                style={styles.avatar}
+              />
+              {/* <Image source={{ uri: 'https://via.placeholder.com/50' }} style={styles.avatar} /> */}
 
-            <View style={styles.textContainer}>
-              <Text style={styles.name}>{item.first_name} {item.last_name}</Text>
-              <Text style={styles.lastMessage}>{item.status}</Text>
-            </View>
-
-            {item.status === 'Pending' && (
-              <View style={styles.actionsContainer}>
-                <TouchableOpacity
-                  style={[styles.actionButton, { backgroundColor: '#4CAF50' }]}
-                  onPress={() => handleRespondToRequest(item.id, 'Accept')}
-                >
-                  <Text style={{ color: '#FFF' }}>Accept</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.actionButton, { backgroundColor: '#F44336' }]}
-                  onPress={() => handleRespondToRequest(item.id, 'Reject')}
-                >
-                  <Text style={{ color: '#FFF' }}>Reject</Text>
-                </TouchableOpacity>
+              <View style={styles.textContainer}>
+                <Text style={styles.name}>
+                  {item.first_name} {item.last_name}
+                </Text>
+                <Text style={styles.lastMessage}>{item.status}</Text>
               </View>
-            )}
-          </View>
+
+              {item.status === "Pending" && (
+                <View style={styles.actionsContainer}>
+                  <TouchableOpacity
+                    style={[
+                      styles.actionButton,
+                      { backgroundColor: "#4CAF50" },
+                    ]}
+                    onPress={() => handleRespondToRequest(item.id, "Accept")}
+                  >
+                    <Text style={{ color: "#FFF" }}>Accept</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.actionButton,
+                      { backgroundColor: "#F44336" },
+                    ]}
+                    onPress={() => handleRespondToRequest(item.id, "Reject")}
+                  >
+                    <Text style={{ color: "#FFF" }}>Reject</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
           );
         }}
         contentContainerStyle={styles.listContainer}
@@ -218,21 +255,27 @@ const SocialTab = ({ navigation }: any) => {
     <View style={styles.container}>
       <View style={styles.tabContainer}>
         <TouchableOpacity
-          style={activeTab === 'findFriends' ? styles.activeTab : styles.inactiveTab}
-          onPress={() => setActiveTab('findFriends')}
+          style={
+            activeTab === "findFriends" ? styles.activeTab : styles.inactiveTab
+          }
+          onPress={() => setActiveTab("findFriends")}
         >
           <Text style={styles.tabText}>Find Friends</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={activeTab === 'requests' ? styles.activeTab : styles.inactiveTab}
-          onPress={() => setActiveTab('requests')}
+          style={
+            activeTab === "requests" ? styles.activeTab : styles.inactiveTab
+          }
+          onPress={() => setActiveTab("requests")}
         >
           <Text style={styles.tabText}>Requests</Text>
         </TouchableOpacity>
       </View>
 
-      {activeTab === 'findFriends' ? renderFindFriendsTab() : renderRequestsTab()}
+      {activeTab === "findFriends"
+        ? renderFindFriendsTab()
+        : renderRequestsTab()}
     </View>
   );
 };
@@ -240,58 +283,58 @@ const SocialTab = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(197, 110, 50, 0.7)',
+    flexDirection: "row",
+    backgroundColor: "rgba(197, 110, 50, 0.7)",
   },
   activeTab: {
     flex: 1,
     paddingVertical: 12,
-    backgroundColor: 'rgba(197, 110, 50, 0.9)',
-    alignItems: 'center',
+    backgroundColor: "rgba(197, 110, 50, 0.9)",
+    alignItems: "center",
   },
   inactiveTab: {
     flex: 1,
     paddingVertical: 12,
-    backgroundColor: 'rgba(180, 110, 40, 0.4)',
-    alignItems: 'center',
+    backgroundColor: "rgba(180, 110, 40, 0.4)",
+    alignItems: "center",
   },
   tabText: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: "#fff",
+    fontWeight: "bold",
   },
   topSection: {
-    height: '20%',
-    backgroundColor: 'rgba(197, 110, 50, 0.9)',
-    justifyContent: 'center',
+    height: "20%",
+    backgroundColor: "rgba(197, 110, 50, 0.9)",
+    justifyContent: "center",
     paddingHorizontal: 16,
   },
   heading: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: "bold",
+    color: "#fff",
     marginBottom: 12,
   },
   searchBar: {
     height: 40,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 20,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
   },
   listContainer: {
     paddingHorizontal: 16,
     paddingBottom: 16,
   },
   listItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: "#e0e0e0",
   },
   avatar: {
     width: 50,
@@ -304,22 +347,22 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   lastMessage: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
   },
   addButton: {
     paddingVertical: 6,
     // paddingHorizontal: 30,
     borderRadius: 16,
-    width:100,
+    width: 100,
   },
   actionsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   actionButton: {
     paddingVertical: 6,
