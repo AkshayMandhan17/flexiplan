@@ -24,14 +24,14 @@ SECRET_KEY = 'your-default-secret-key-here'
 
 # Google Gemini API Key
 # Get your API key from: https://makersuite.google.com/app/apikey
-# GEMINI_API_KEY = "AIzaSyCFCSleVdgC4N-DE3K3L2ENTS7KR72kbSk"  # Replace this with the new API key from makersuite.google.com
-GEMINI_API_KEY = "AIzaSyC4wEvsWP8aRYD_GxdgL68fEAfWhUIUcSs" #Ritesh's API key
+GEMINI_API_KEY = "AIzaSyCFCSleVdgC4N-DE3K3L2ENTS7KR72kbSk"  # Replace this with the new API key from makersuite.google.com
+# GEMINI_API_KEY = "AIzaSyC4wEvsWP8aRYD_GxdgL68fEAfWhUIUcSs" #Ritesh's API key
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '192.168.100.6', '192.168.0.105', '10.0.2.174', '192.168.1.119', '192.168.100.189']  # Add the IP address of your machine
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '192.168.100.6', '192.168.0.105', '10.0.2.174', '192.168.1.119', '192.168.100.189', '10.102.70.208']  # Add the IP address of your machine
 
-GOOGLE_API_KEY= "AIzaSyBP2VOHu7uFsJ5kNxxWoyalLygStnRagQs"
+GOOGLE_API_KEY= "AIzaSyBeIcQDtjdN3xcaDYqLexochY8uwmhaiEw"
 
 # Application definition
 
@@ -104,7 +104,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'flexiplan',
         'USER': 'postgres',
-        'PASSWORD': 'postgres',
+        'PASSWORD': 'superuser@flexiplan',
         'HOST': 'localhost',
         'PORT': '5432',
     }
