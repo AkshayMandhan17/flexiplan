@@ -8,51 +8,103 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Keyboard, // Import Keyboard
+  Keyboard,
   Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { fetchHobbies, addUserHobby } from "../utils/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Hobby } from "../utils/model"; // Ensure Hobby type is correctly defined
+import { Hobby } from "../utils/model";
 
 // --- Color Palette ---
 const PRIMARY_COLOR = "rgba(197, 110, 50, 0.9)";
 const PRIMARY_COLOR_LIGHT = "rgba(197, 110, 50, 0.1)";
-const BACKGROUND_COLOR = "#F8F8F8"; // Light background for contrast
+const BACKGROUND_COLOR = "#F8F8F8";
 const CARD_BACKGROUND_COLOR = "#FFFFFF";
 const TEXT_COLOR_PRIMARY = "#333333";
 const TEXT_COLOR_SECONDARY = "#666666";
 const BORDER_COLOR = "#E0E0E0";
 const ICON_COLOR_LIGHT = "#FFFFFF";
+const ERROR_COLOR = "#D32F2F";
+
+// Error states type
+type ErrorState = {
+  hasError: boolean;
+  message?: string;
+  isCritical?: boolean;
+};
 
 const ExploreHobbiesScreen = () => {
-  const [allHobbies, setAllHobbies] = useState<Hobby[]>([]); // Store the original fetched list
+  const [allHobbies, setAllHobbies] = useState<Hobby[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [error, setError] = useState<ErrorState>({ hasError: false });
+
+  // Helper function for consistent error handling
+  const handleError = (error: any, context: string, isCritical = false) => {
+    console.error(`Error in ${context}:`, error);
+
+    let errorMessage = "An unexpected error occurred.";
+    if (typeof error === "string") {
+      errorMessage = error;
+    } else if (error?.message) {
+      errorMessage = error.message;
+    } else if (error?.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    }
+
+    setError({
+      hasError: true,
+      message: errorMessage,
+      isCritical,
+    });
+
+    if (isCritical) {
+      Alert.alert("Error", errorMessage, [
+        {
+          text: "OK",
+          onPress: () => {
+            // Potentially navigate back or to a safe screen
+            // if the error is critical
+          },
+        },
+      ]);
+    }
+  };
+
+  // Reset error state
+  const resetError = () => {
+    setError({ hasError: false });
+  };
 
   // Fetch initial data
   useEffect(() => {
     const loadData = async () => {
-      setLoading(true); // Ensure loading state is true at the start
-      try {
-        const data = await fetchHobbies();
-        setAllHobbies(data); // Store the full list
+      setLoading(true);
+      resetError();
 
+      try {
         const storedUserId = await AsyncStorage.getItem("user_id");
         if (storedUserId) {
           setUserId(parseInt(storedUserId, 10));
         } else {
-          console.warn("User ID not found in storage."); // Use console.warn instead of Alert here
-          // Consider redirecting to login if userId is strictly required immediately
+          console.warn("User ID not found in storage.");
+          // Non-critical error - user can still browse hobbies
+          setError({
+            hasError: true,
+            message: "You need to be logged in to add hobbies.",
+            isCritical: false,
+          });
         }
-      } catch (error) {
-        console.error("Failed to load data:", error);
-        Alert.alert(
-          "Error",
-          "Could not load hobbies. Please check your connection and try again."
-        );
+
+        const data = await fetchHobbies();
+        if (!data || !Array.isArray(data)) {
+          throw new Error("Invalid data format received from server");
+        }
+        setAllHobbies(data);
+      } catch (err) {
+        handleError(err, "loadData", true); // Critical error
       } finally {
         setLoading(false);
       }
@@ -63,51 +115,76 @@ const ExploreHobbiesScreen = () => {
 
   // Filter and group hobbies based on search query
   const displayedGroupedHobbies = useMemo(() => {
-    const filtered = searchQuery
-      ? allHobbies.filter(
-          (hobby) =>
-            hobby.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            hobby.category.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-      : allHobbies;
+    try {
+      const filtered = searchQuery
+        ? allHobbies.filter(
+            (hobby) =>
+              hobby.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              hobby.category?.toLowerCase().includes(searchQuery.toLowerCase())
+          )
+        : allHobbies;
 
-    // Group the filtered hobbies
-    const grouped: { [key: string]: Hobby[] } = {};
-    filtered.forEach((hobby) => {
-      if (!grouped[hobby.category]) {
-        grouped[hobby.category] = [];
-      }
-      grouped[hobby.category].push(hobby);
-    });
-    return grouped;
-  }, [allHobbies, searchQuery]); // Depend on allHobbies and searchQuery
+      // Group the filtered hobbies
+      const grouped: { [key: string]: Hobby[] } = {};
+      filtered.forEach((hobby) => {
+        if (!hobby.category) {
+          console.warn("Hobby missing category:", hobby);
+          return;
+        }
+        if (!grouped[hobby.category]) {
+          grouped[hobby.category] = [];
+        }
+        grouped[hobby.category].push(hobby);
+      });
+      return grouped;
+    } catch (err) {
+      handleError(err, "filterAndGroupHobbies");
+      return {};
+    }
+  }, [allHobbies, searchQuery]);
 
-  const handleAddHobby = async (hobbyId: number) => {
+  const handleAddHobby = async (hobbyId: number, hobbyName: string) => {
     if (!userId) {
       Alert.alert(
         "Login Required",
-        "You need to be logged in to add hobbies."
+        "You need to be logged in to add hobbies.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Login",
+            onPress: () => {
+              /* navigation.navigate("Login") */
+            },
+          },
+        ]
       );
-      // Optional: navigation.navigate('Login');
       return;
     }
+
     try {
-      // Optional: Add some visual feedback while adding
-      const result = await addUserHobby(userId, hobbyId);
-      if (result) {
-        Alert.alert("Success!", `${result.hobby_name} added to your hobbies.`);
-        // Maybe update UI state to show it's added? (Advanced)
-      } else {
-        // Handle cases where addUserHobby might return falsy without throwing
-         Alert.alert("Error", "Could not add hobby. Please try again.");
-      }
-    } catch (error: any) {
-      console.error("Failed to add hobby:", error);
-      const errorMessage =
-        error.response?.data?.message || // Check Axios-like error structure
-        error.message || // Generic error message
-        "An unexpected error occurred.";
-      Alert.alert("Failed to Add Hobby", errorMessage);
+      await addUserHobby(userId, hobbyId);
+      Alert.alert("Success!", `${hobbyName} added to your hobbies.`);
+    } catch (err: any) {
+      const message = err?.message || "";
+      const alreadyAdded =
+        message.toLowerCase().includes("already") ||
+        message.toLowerCase().includes("exists");
+
+      Alert.alert(
+        alreadyAdded ? "Hobby Already Added" : "Failed to Add Hobby",
+        alreadyAdded ? `${hobbyName} is already in your list.` : message,
+        [
+          { text: "OK" },
+          ...(alreadyAdded
+            ? []
+            : [
+                {
+                  text: "Try Again",
+                  onPress: () => handleAddHobby(hobbyId, hobbyName),
+                },
+              ]),
+        ]
+      );
     }
   };
 
@@ -120,6 +197,21 @@ const ExploreHobbiesScreen = () => {
     );
   }
 
+  if (error.hasError && error.isCritical) {
+    return (
+      <View style={styles.errorContainer}>
+        <Ionicons name="warning" size={50} color={ERROR_COLOR} />
+        <Text style={styles.errorText}>{error.message}</Text>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={() => window.location.reload()} // Or implement a reload function
+        >
+          <Text style={styles.retryButtonText}>Try Again</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   const categoryKeys = Object.keys(displayedGroupedHobbies);
 
   return (
@@ -128,6 +220,16 @@ const ExploreHobbiesScreen = () => {
       <View style={styles.headerContainer}>
         <Text style={styles.headerTitle}>Explore Hobbies</Text>
       </View>
+
+      {/* Show non-critical error banner */}
+      {error.hasError && !error.isCritical && (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>{error.message}</Text>
+          <TouchableOpacity onPress={resetError}>
+            <Ionicons name="close" size={20} color={ICON_COLOR_LIGHT} />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Search Section */}
       <View style={styles.searchOuterContainer}>
@@ -143,13 +245,23 @@ const ExploreHobbiesScreen = () => {
             placeholder="Search by name or category..."
             placeholderTextColor={TEXT_COLOR_SECONDARY}
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={(text) => {
+              setSearchQuery(text);
+              resetError();
+            }}
             returnKeyType="search"
-            onSubmitEditing={() => Keyboard.dismiss()} // Dismiss keyboard on submit
+            onSubmitEditing={() => Keyboard.dismiss()}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearIcon}>
-              <Ionicons name="close-circle" size={20} color={TEXT_COLOR_SECONDARY} />
+            <TouchableOpacity
+              onPress={() => setSearchQuery("")}
+              style={styles.clearIcon}
+            >
+              <Ionicons
+                name="close-circle"
+                size={20}
+                color={TEXT_COLOR_SECONDARY}
+              />
             </TouchableOpacity>
           )}
         </View>
@@ -157,20 +269,26 @@ const ExploreHobbiesScreen = () => {
 
       {/* Hobbies List */}
       <ScrollView
-          style={styles.scrollContainer}
-          contentContainerStyle={styles.scrollContentContainer}
-          keyboardShouldPersistTaps="handled" // Dismiss keyboard when tapping outside input
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContentContainer}
+        keyboardShouldPersistTaps="handled"
       >
         {categoryKeys.length > 0 ? (
           categoryKeys.map((category) => (
             <View key={category} style={styles.categoryCard}>
               <Text style={styles.categoryTitle}>{category}</Text>
-              {displayedGroupedHobbies[category].map((item) => (
-                <View key={item.id.toString()} style={styles.hobbyItem}>
+              {displayedGroupedHobbies[category].map((item, index, array) => (
+                <View
+                  key={item.id.toString()}
+                  style={[
+                    styles.hobbyItem,
+                    index === array.length - 1 && styles.hobbyItemLast,
+                  ]}
+                >
                   <Text style={styles.hobbyText}>{item.name}</Text>
                   <TouchableOpacity
                     style={styles.addButton}
-                    onPress={() => handleAddHobby(item.id)}
+                    onPress={() => handleAddHobby(item.id, item.name)}
                     activeOpacity={0.7}
                   >
                     <Ionicons name="add" size={22} color={ICON_COLOR_LIGHT} />
@@ -180,9 +298,12 @@ const ExploreHobbiesScreen = () => {
             </View>
           ))
         ) : (
-          // Displayed when search yields no results
           <View style={styles.noResultsContainer}>
-            <Ionicons name="sad-outline" size={60} color={TEXT_COLOR_SECONDARY} />
+            <Ionicons
+              name="sad-outline"
+              size={60}
+              color={TEXT_COLOR_SECONDARY}
+            />
             <Text style={styles.noResultsText}>
               No hobbies found matching "{searchQuery}"
             </Text>
@@ -201,7 +322,7 @@ const styles = StyleSheet.create({
   // --- Header ---
   headerContainer: {
     backgroundColor: PRIMARY_COLOR,
-    paddingTop: Platform.OS === 'android' ? 25 : 50, // Adjust status bar height
+    paddingTop: Platform.OS === "android" ? 25 : 50,
     paddingBottom: 15,
     paddingHorizontal: 20,
     alignItems: "center",
@@ -213,20 +334,58 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: ICON_COLOR_LIGHT,
   },
+  // --- Error States ---
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+    backgroundColor: BACKGROUND_COLOR,
+  },
+  errorText: {
+    fontSize: 18,
+    color: ERROR_COLOR,
+    textAlign: "center",
+    marginVertical: 20,
+  },
+  errorBanner: {
+    backgroundColor: ERROR_COLOR,
+    padding: 12,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  errorBannerText: {
+    color: ICON_COLOR_LIGHT,
+    fontSize: 14,
+    flex: 1,
+    marginRight: 10,
+  },
+  retryButton: {
+    backgroundColor: ERROR_COLOR,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: ICON_COLOR_LIGHT,
+  },
+  retryButtonText: {
+    color: ICON_COLOR_LIGHT,
+    fontWeight: "bold",
+  },
   // --- Search ---
   searchOuterContainer: {
     padding: 15,
-    backgroundColor: BACKGROUND_COLOR, // Match screen background
+    backgroundColor: BACKGROUND_COLOR,
   },
   searchInnerContainer: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: CARD_BACKGROUND_COLOR,
-    borderRadius: 25, // More rounded
+    borderRadius: 25,
     paddingHorizontal: 15,
     borderWidth: 1,
     borderColor: BORDER_COLOR,
-    // Shadow for depth
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -238,13 +397,13 @@ const styles = StyleSheet.create({
   },
   searchBar: {
     flex: 1,
-    height: 45, // Increased height
+    height: 45,
     fontSize: 16,
     color: TEXT_COLOR_PRIMARY,
   },
   clearIcon: {
-      marginLeft: 10,
-      padding: 5,
+    marginLeft: 10,
+    padding: 5,
   },
   // --- ScrollView ---
   scrollContainer: {
@@ -252,7 +411,7 @@ const styles = StyleSheet.create({
   },
   scrollContentContainer: {
     paddingHorizontal: 15,
-    paddingBottom: 20, // Space at the bottom
+    paddingBottom: 20,
   },
   // --- Category ---
   categoryCard: {
@@ -260,7 +419,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 15,
     marginBottom: 15,
-    // Shadow for cards
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
@@ -270,10 +428,10 @@ const styles = StyleSheet.create({
   categoryTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: PRIMARY_COLOR, // Use primary color for category titles
+    color: PRIMARY_COLOR,
     marginBottom: 15,
     borderBottomWidth: 1,
-    borderBottomColor: PRIMARY_COLOR_LIGHT, // Light separator
+    borderBottomColor: PRIMARY_COLOR_LIGHT,
     paddingBottom: 8,
   },
   // --- Hobby Item ---
@@ -283,27 +441,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: BORDER_COLOR, // Separator line between hobbies
-    // Remove background from original style
+    borderBottomColor: BORDER_COLOR,
   },
-  // Make last item in category not have a border bottom
   hobbyItemLast: {
-      borderBottomWidth: 0,
+    borderBottomWidth: 0,
   },
   hobbyText: {
     fontSize: 16,
     color: TEXT_COLOR_PRIMARY,
-    flex: 1, // Allow text to take available space
+    flex: 1,
     marginRight: 10,
   },
   addButton: {
     backgroundColor: PRIMARY_COLOR,
-    borderRadius: 18, // Circular button
+    borderRadius: 18,
     width: 36,
     height: 36,
     justifyContent: "center",
     alignItems: "center",
-    // Small shadow for the button
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
@@ -324,17 +479,17 @@ const styles = StyleSheet.create({
   },
   // --- No Results ---
   noResultsContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginTop: 50, // Add some top margin
-      padding: 20,
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 50,
+    padding: 20,
   },
   noResultsText: {
-      fontSize: 16,
-      color: TEXT_COLOR_SECONDARY,
-      textAlign: 'center',
-      marginTop: 10,
+    fontSize: 16,
+    color: TEXT_COLOR_SECONDARY,
+    textAlign: "center",
+    marginTop: 10,
   },
 });
 
