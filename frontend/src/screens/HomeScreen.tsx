@@ -32,6 +32,7 @@ import {
   updateRoutine,
   uploadUserPfp,
   fetchPublicUserDetails,
+  removeActivityFromRoutine,
 } from "../utils/api";
 import { createStackNavigator } from "@react-navigation/stack";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
@@ -72,8 +73,10 @@ const HomeScreen = () => {
   const tabBarHeight = useBottomTabBarHeight();
   const [isSidebarVisible, setSidebarVisible] = useState(false);
   const [sidebarAnimation] = useState(new Animated.Value(250));
-  const [weeklyRoutineData, setWeeklyRoutineData] = useState<RoutineData | null>(null);
-  const [routineLoadingError, setRoutineLoadingError] = useState<boolean>(false);
+  const [weeklyRoutineData, setWeeklyRoutineData] =
+    useState<RoutineData | null>(null);
+  const [routineLoadingError, setRoutineLoadingError] =
+    useState<boolean>(false);
   const [currentDayIndex, setCurrentDayIndex] = useState<number>(0); // 0 for today, -1 for yesterday, 1 for tomorrow, etc.
   const daysOfWeek = [
     "Sunday",
@@ -91,31 +94,37 @@ const HomeScreen = () => {
       id: "1",
       name: "Completion Analytics",
       screen: "CompletionAnalytics",
+      lottiename: "Completion"
     },
     {
       id: "2",
       name: "Time Analytics",
       screen: "TimeAnalytics",
+      lottiename: "Time"
     },
     {
       id: "3",
       name: "Activity Frequency",
       screen: "ActivityFrequency",
+      lottiename: "Activity"
     },
     {
       id: "4",
       name: "Weekly Patterns",
       screen: "WeeklyPatterns",
+      lottiename: "Weekly"
     },
     {
       id: "5",
       name: "Time Balance",
       screen: "TimeBalance",
+      lottiename: "TimeBalance"
     },
     {
       id: "6",
       name: "Consistency Score",
       screen: "ConsistencyScore",
+      lottiename: "Activity"
     },
   ];
 
@@ -550,15 +559,17 @@ const HomeScreen = () => {
 
   useEffect(() => {
     if (weeklyRoutineData) {
-      const currentDayName = daysOfWeek[(new Date().getDay() + currentDayIndex + 7) % 7]; // Ensure positive index
+      const currentDayName =
+        daysOfWeek[(new Date().getDay() + currentDayIndex + 7) % 7]; // Ensure positive index
       const dailyTasks = weeklyRoutineData[currentDayName] || [];
-      // console.log(JSON.stringify(dailyTasks, null, 2));
+      // console.log(JSON.stringify(weeklyRoutineData, null, 2));
       const formattedTasks = dailyTasks.map((task, index) => ({
         id: String(index), // Or generate a more unique ID if needed
         name: task.activity,
         emoji: getEmojiForType(task.type), // Function to determine emoji based on task type
         timeRange: `${task.start_time} - ${task.end_time}`,
         completed: task.is_completed,
+        day: currentDayName,
       }));
       setTasks(formattedTasks);
     }
@@ -613,8 +624,32 @@ const HomeScreen = () => {
     }
   };
 
-  const removeTask = (id: string) => {
-    setTasks((prev) => prev.filter((task) => task.id !== id));
+  // const removeTask = (id: string) => {
+  //   setTasks((prev) => prev.filter((task) => task.id !== id));
+  // };
+
+  const removeTask = async (id: string) => {
+    try {
+      const taskToRemove = tasks.find((task) => task.id === id);
+      if (!taskToRemove) return;      
+
+      // Call the API to remove the activity
+      await removeActivityFromRoutine(
+        taskToRemove.day,
+        taskToRemove.name,
+        taskToRemove.emoji === "🗓️" ? "task" : "hobby"
+      );
+      fetchRoutine();
+
+      // Update local state only after successful API call
+      setTasks((prev) => prev.filter((task) => task.id !== id));
+
+      // Optional: Show success message
+      Alert.alert("Success", "Activity removed successfully!");
+    } catch (error) {
+      console.error("Failed to remove activity:", error);
+      Alert.alert("Error", "Failed to remove activity. Please try again.");
+    }
   };
 
   const renderRightActions = () => (
