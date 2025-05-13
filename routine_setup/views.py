@@ -22,7 +22,7 @@ if GOOGLE_API_KEY is None:
     raise Exception("Set GOOGLE_API_KEY in your env")
 
 genai.configure(api_key=GOOGLE_API_KEY)
-model = genai.GenerativeModel('models/gemini-1.5-pro-latest')
+model = genai.GenerativeModel('models/gemini-2.0-flash')
 
 # Days of the week for validation and parsing
 daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
