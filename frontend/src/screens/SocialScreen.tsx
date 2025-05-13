@@ -136,7 +136,8 @@ const SocialTab = ({ navigation }: any) => {
         data={filteredUsers}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => {
-          //console.log(item);
+          // console.log(item);
+          // console.log(friendshipStatuses[item.id]);
           return (
             <View style={styles.listItem}>
               <Image
