@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Animated,
   Alert,
   Switch,
+  Dimensions,
 } from "react-native";
 import { ProgressBar } from "react-native-paper";
 import { Checkbox } from "react-native-paper";
@@ -23,7 +24,6 @@ import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import AsyncStorage from "@react-native-async-storage/async-storage"; // Import AsyncStorage
-import { Dimensions } from "react-native";
 import { RoutineData, UserRoutineResponse } from "../utils/model";
 import {
   fetchUserRoutines,
@@ -32,6 +32,7 @@ import {
   updateRoutine,
   uploadUserPfp,
   fetchPublicUserDetails,
+  removeActivityFromRoutine,
 } from "../utils/api";
 import { createStackNavigator } from "@react-navigation/stack";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
@@ -41,6 +42,8 @@ import FriendsScreen from "./FriendsScreen"; // Make sure this path is correct
 import { Image, Modal } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { API_BASE_URL } from "../config";
+import LottieView from "lottie-react-native";
+import { LinearGradient } from "expo-linear-gradient";
 
 const SettingsStack = createStackNavigator();
 const windowHeight = Dimensions.get("window").height;
@@ -66,14 +69,31 @@ type User = {
   profile_picture: string | null;
 };
 
+type AnalysisCategory = {
+  id: string;
+  name: string;
+  screen: string;
+  lottiename: string;
+};
+
+const THEME_COLOR = 'rgba(197, 110, 50, 1)';
+const THEME_COLOR_LIGHT = 'rgba(197, 110, 50, 0.1)';
+const THEME_COLOR_DARK = 'rgba(197, 110, 50, 0.8)';
+const BACKGROUND_COLOR = '#F5F5F5';
+const CARD_BACKGROUND = '#FFFFFF';
+const TEXT_PRIMARY = '#333333';
+const TEXT_SECONDARY = '#666666';
+
 const HomeScreen = () => {
   const [profilePic, setProfilePic] = useState<string | null>(null);
   const [showPopup, setShowPopup] = useState(false);
   const tabBarHeight = useBottomTabBarHeight();
   const [isSidebarVisible, setSidebarVisible] = useState(false);
   const [sidebarAnimation] = useState(new Animated.Value(250));
-  const [weeklyRoutineData, setWeeklyRoutineData] = useState<RoutineData | null>(null);
-  const [routineLoadingError, setRoutineLoadingError] = useState<boolean>(false);
+  const [weeklyRoutineData, setWeeklyRoutineData] =
+    useState<RoutineData | null>(null);
+  const [routineLoadingError, setRoutineLoadingError] =
+    useState<boolean>(false);
   const [currentDayIndex, setCurrentDayIndex] = useState<number>(0); // 0 for today, -1 for yesterday, 1 for tomorrow, etc.
   const daysOfWeek = [
     "Sunday",
@@ -91,31 +111,37 @@ const HomeScreen = () => {
       id: "1",
       name: "Completion Analytics",
       screen: "CompletionAnalytics",
+      lottiename: "Completion"
     },
     {
       id: "2",
       name: "Time Analytics",
       screen: "TimeAnalytics",
+      lottiename: "Time"
     },
     {
       id: "3",
       name: "Activity Frequency",
       screen: "ActivityFrequency",
+      lottiename: "Activity"
     },
     {
       id: "4",
       name: "Weekly Patterns",
       screen: "WeeklyPatterns",
+      lottiename: "Weekly"
     },
     {
       id: "5",
       name: "Time Balance",
       screen: "TimeBalance",
+      lottiename: "TimeBalance"
     },
     {
       id: "6",
       name: "Consistency Score",
       screen: "ConsistencyScore",
+      lottiename: "Consistency"
     },
   ];
 
@@ -130,6 +156,8 @@ const HomeScreen = () => {
   const [isOffDay, setIsOffDay] = useState(false);
   const { setIsLoggedIn } = useAuth();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  const animationRefs = useRef<{ [key: string]: LottieView | null }>({});
 
   const handleChooseImage = async () => {
     try {
@@ -550,15 +578,17 @@ const HomeScreen = () => {
 
   useEffect(() => {
     if (weeklyRoutineData) {
-      const currentDayName = daysOfWeek[(new Date().getDay() + currentDayIndex + 7) % 7]; // Ensure positive index
+      const currentDayName =
+        daysOfWeek[(new Date().getDay() + currentDayIndex + 7) % 7]; // Ensure positive index
       const dailyTasks = weeklyRoutineData[currentDayName] || [];
-      // console.log(JSON.stringify(dailyTasks, null, 2));
+      // console.log(JSON.stringify(weeklyRoutineData, null, 2));
       const formattedTasks = dailyTasks.map((task, index) => ({
         id: String(index), // Or generate a more unique ID if needed
         name: task.activity,
         emoji: getEmojiForType(task.type), // Function to determine emoji based on task type
         timeRange: `${task.start_time} - ${task.end_time}`,
         completed: task.is_completed,
+        day: currentDayName,
       }));
       setTasks(formattedTasks);
     }
@@ -613,8 +643,32 @@ const HomeScreen = () => {
     }
   };
 
-  const removeTask = (id: string) => {
-    setTasks((prev) => prev.filter((task) => task.id !== id));
+  // const removeTask = (id: string) => {
+  //   setTasks((prev) => prev.filter((task) => task.id !== id));
+  // };
+
+  const removeTask = async (id: string) => {
+    try {
+      const taskToRemove = tasks.find((task) => task.id === id);
+      if (!taskToRemove) return;      
+
+      // Call the API to remove the activity
+      await removeActivityFromRoutine(
+        taskToRemove.day,
+        taskToRemove.name,
+        taskToRemove.emoji === "🗓️" ? "task" : "hobby"
+      );
+      fetchRoutine();
+
+      // Update local state only after successful API call
+      setTasks((prev) => prev.filter((task) => task.id !== id));
+
+      // Optional: Show success message
+      Alert.alert("Success", "Activity removed successfully!");
+    } catch (error) {
+      console.error("Failed to remove activity:", error);
+      Alert.alert("Error", "Failed to remove activity. Please try again.");
+    }
   };
 
   const renderRightActions = () => (
@@ -674,136 +728,155 @@ const HomeScreen = () => {
     }'s To Do`; // Fallback for other days
   };
 
-  return (
-    <View style={{ flex: 1 }}>
-      <StatusBar barStyle={"light-content"} />
-      <TouchableOpacity style={styles.sidebarToggle} onPress={toggleSidebar}>
-        <Icon name="menu-outline" size={30} color="black" />
-      </TouchableOpacity>
-      {isSidebarVisible && (
-        <>
-          <TouchableOpacity
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: "rgba(0, 0, 0, 0.5)",
-              zIndex: 1,
-            }}
-            activeOpacity={1}
-            onPress={toggleSidebar}
-          />
-          <Sidebar />
-        </>
-      )}
+  const getLottieSource = (lottiename: string) => {
+    switch (lottiename) {
+      case 'Activity':
+        return require('../../lotties/Activity.json');
+      case 'Completion':
+        return require('../../lotties/Completion.json');
+      case 'Time':
+        return require('../../lotties/Time.json');
+      case 'Weekly':
+        return require('../../lotties/Weekly.json');
+      case 'TimeBalance':
+        return require('../../lotties/TimeBalance.json');
+      case 'Consistency':
+        return require('../../lotties/Consistency.json');
+      default:
+        return require('../../lotties/Activity.json');
+    }
+  };
 
-      <ScrollView style={{ flex: 1 }}>
-        <View style={{ height: 230 }}>
-          <View style={styles.header}>
-            <Text style={styles.heading}>Routine Analysis</Text>
+  const renderAnalysisCard = ({ item }: { item: AnalysisCategory }) => {
+    return (
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={() => handleCardPress(item)}
+      >
+        <Animated.View
+          style={[
+            styles.routineCard,
+            activeRoutine === item.id && styles.activeRoutineCard,
+          ]}
+        >
+          <View style={styles.lottieContainer}>
+            <LottieView
+              ref={ref => animationRefs.current[item.id] = ref}
+              source={getLottieSource(item.lottiename)}
+              autoPlay
+              loop
+              style={styles.lottieAnimation}
+            />
           </View>
-          <FlatList
-            data={analysisCategories}
-            horizontal
-            keyExtractor={(item) => item.id}
-            showsHorizontalScrollIndicator={false}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                activeOpacity={1}
-                onPress={() => handleCardPress(item)}
-              >
-                <View
-                  style={[
-                    styles.routineCard,
-                    activeRoutine === item.id && styles.activeRoutineCard,
-                  ]}
-                >
-                  {/* <View style={styles.avatar}>
-                    <Text style={styles.emoji}>{item.emoji}</Text>
-                  </View> */}
-                  <Text style={styles.routineName}>{item.name}</Text>
-                  {/* <ProgressBar
-                    progress={item.progress}
-                    color="#76c7c0"
-                    style={styles.progressBar}
-                  /> */}
-                  {/* <Text style={styles.progressText}>
-                    {Math.round(item.progress * 100)}% Complete
-                  </Text> */}
-                </View>
-              </TouchableOpacity>
-            )}
-          />
-        </View>
-        {!weeklyRoutineData ? (
-          <View style={styles.noRoutineContainer}>
-            <Text style={styles.noRoutineText}>No routine found.</Text>
+          <Text style={styles.routineName}>{item.name}</Text>
+        </Animated.View>
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+      <LinearGradient
+        colors={[BACKGROUND_COLOR, '#FFFFFF']}
+        style={styles.gradientBackground}
+      >
+        <TouchableOpacity style={styles.sidebarToggle} onPress={toggleSidebar}>
+          <Icon name="menu-outline" size={30} color="#fff" />
+        </TouchableOpacity>
+        
+        {isSidebarVisible && (
+          <>
             <TouchableOpacity
-              style={styles.generateButton}
-              onPress={handleGenerateRoutine}
-            >
-              <Text style={styles.generateButtonText}>Generate Routine</Text>
-            </TouchableOpacity>
+              style={styles.overlay}
+              activeOpacity={1}
+              onPress={toggleSidebar}
+            />
+            <Sidebar />
+          </>
+        )}
+
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          <View style={styles.analysisSection}>
+            <Text style={styles.sectionTitle}>Routine Analysis</Text>
+            <FlatList
+              data={analysisCategories}
+              horizontal
+              keyExtractor={(item) => item.id}
+              showsHorizontalScrollIndicator={false}
+              renderItem={renderAnalysisCard}
+              contentContainerStyle={styles.analysisList}
+            />
           </View>
-        ) : (
-          <View style={styles.section}>
-            <View
-              style={[
-                styles.header,
-                {
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                },
-              ]}
-            >
-              <TouchableOpacity onPress={() => changeDay(-1)}>
-                <Icon name="chevron-back-outline" size={24} color="#76c7c0" />
-              </TouchableOpacity>
-              <View style={{ alignItems: "center" }}>
-                <Text style={styles.heading}>{getSectionHeading()}</Text>
-                <Text style={styles.dateText}>{getCurrentDayText()}</Text>
-              </View>
-              <TouchableOpacity onPress={() => changeDay(1)}>
-                <Icon
-                  name="chevron-forward-outline"
-                  size={24}
-                  color="#76c7c0"
-                />
+
+          {!weeklyRoutineData ? (
+            <View style={styles.noRoutineContainer}>
+              <LottieView
+                source={require("../../lotties/Activity.json")}
+                autoPlay
+                loop
+                style={styles.emptyStateAnimation}
+              />
+              <Text style={styles.noRoutineText}>No routine found.</Text>
+              <TouchableOpacity
+                style={styles.generateButton}
+                onPress={handleGenerateRoutine}
+              >
+                <Text style={styles.generateButtonText}>Generate Routine</Text>
               </TouchableOpacity>
             </View>
-            {tasks.map((task) => {
-              if (!task.completed) {
-                return (
-                  <Swipeable
-                    key={task.id}
-                    renderRightActions={renderRightActions}
-                    onSwipeableRightOpen={() => removeTask(task.id)}
-                  >
-                    <View style={styles.taskItem}>
-                      <View style={styles.taskAvatar}>
-                        <Text style={styles.taskEmoji}>{task.emoji}</Text>
-                      </View>
-                      <View style={styles.taskDetails}>
-                        <Text style={styles.taskName}>{task.name}</Text>
-                        <Text style={styles.taskTime}>{task.timeRange}</Text>
-                      </View>
-                      <Checkbox
-                        status={task.completed ? "checked" : "unchecked"}
-                        onPress={() => toggleTask(task.id, task.emoji)}
-                        color="#76c7c0"
-                      />
-                    </View>
-                  </Swipeable>
-                );
-              }
-              return null;
-            })}
-          </View>
-        )}
-      </ScrollView>
+          ) : (
+            <View style={styles.tasksSection}>
+              <View style={styles.dateNavigation}>
+                <TouchableOpacity 
+                  style={styles.navButton}
+                  onPress={() => changeDay(-1)}
+                >
+                  <Icon name="chevron-back-outline" size={24} color="#76c7c0" />
+                </TouchableOpacity>
+                <View style={styles.dateInfo}>
+                  <Text style={styles.dateHeading}>{getSectionHeading()}</Text>
+                  <Text style={styles.dateText}>{getCurrentDayText()}</Text>
+                </View>
+                <TouchableOpacity 
+                  style={styles.navButton}
+                  onPress={() => changeDay(1)}
+                >
+                  <Icon name="chevron-forward-outline" size={24} color="#76c7c0" />
+                </TouchableOpacity>
+              </View>
+
+              {tasks.map((task) => {
+                if (!task.completed) {
+                  return (
+                    <Swipeable
+                      key={task.id}
+                      renderRightActions={renderRightActions}
+                      onSwipeableRightOpen={() => removeTask(task.id)}
+                    >
+                      <Animated.View style={styles.taskItem}>
+                        <View style={styles.taskAvatar}>
+                          <Text style={styles.taskEmoji}>{task.emoji}</Text>
+                        </View>
+                        <View style={styles.taskDetails}>
+                          <Text style={styles.taskName}>{task.name}</Text>
+                          <Text style={styles.taskTime}>{task.timeRange}</Text>
+                        </View>
+                        <Checkbox
+                          status={task.completed ? "checked" : "unchecked"}
+                          onPress={() => toggleTask(task.id, task.emoji)}
+                          color="#76c7c0"
+                        />
+                      </Animated.View>
+                    </Swipeable>
+                  );
+                }
+                return null;
+              })}
+            </View>
+          )}
+        </ScrollView>
+      </LinearGradient>
     </View>
   );
 };
@@ -811,144 +884,199 @@ const HomeScreen = () => {
 export default HomeScreen;
 
 const styles = StyleSheet.create({
-  noRoutineContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 16,
-  },
-  noRoutineText: {
-    fontSize: 16,
-    color: "#333",
-    marginBottom: 16,
-  },
-  generateButton: {
-    backgroundColor: "#76c7c0",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  generateButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
   container: {
     flex: 1,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: BACKGROUND_COLOR,
   },
-  section: {
-    marginVertical: 16,
-    paddingHorizontal: 16,
+  gradientBackground: {
+    flex: 1,
   },
-  header: {
-    height: 60,
-    justifyContent: "center",
-    alignItems: "center",
+  scrollView: {
+    flex: 1,
+    paddingTop: 60, // Add space for the status bar and menu button
   },
-  heading: {
-    color: "black",
+  analysisSection: {
+    paddingTop: 20,
+    paddingBottom: 20,
+    marginBottom: 10,
+  },
+  sectionTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: TEXT_PRIMARY,
+    marginLeft: 20,
+    marginBottom: 20,
+  },
+  analysisList: {
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+  },
+  routineCard: {
+    width: 160,
+    height: 200,
+    backgroundColor: CARD_BACKGROUND,
+    borderRadius: 16,
+    padding: 16,
+    marginRight: 12,
+    marginLeft: 4,
+    marginVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  activeRoutineCard: {
+    backgroundColor: CARD_BACKGROUND,
+    borderWidth: 2,
+    borderColor: THEME_COLOR,
+    shadowColor: THEME_COLOR,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+  lottieContainer: {
+    height: 100,
+    width: '100%',
+    marginBottom: 16,
+  },
+  lottieAnimation: {
+    width: '100%',
+    height: '100%',
+  },
+  routineName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: TEXT_PRIMARY,
+    textAlign: 'center',
+    paddingHorizontal: 8,
+  },
+  tasksSection: {
+    padding: 20,
+    paddingTop: 10,
+  },
+  dateNavigation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+    paddingHorizontal: 10,
+  },
+  navButton: {
+    padding: 12,
+    borderRadius: 20,
+    backgroundColor: THEME_COLOR_LIGHT,
+    marginHorizontal: 8,
+  },
+  dateInfo: {
+    alignItems: 'center',
+    flex: 1,
+    paddingHorizontal: 10,
+  },
+  dateHeading: {
     fontSize: 24,
-  },
-  seeAll: {
-    fontSize: 14,
-    color: "#76c7c0",
+    fontWeight: 'bold',
+    color: TEXT_PRIMARY,
+    marginBottom: 4,
   },
   dateText: {
     fontSize: 14,
-    color: "#333",
-  },
-  routineCard: {
-    width: 150,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginRight: 8,
-    marginLeft: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 0,
-    elevation: 4,
-  },
-  activeRoutineCard: {
-    shadowColor: "#76c7c0",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 4,
-    borderWidth: 2,
-    borderColor: "#76c7c0",
-  },
-  avatar: {
-    backgroundColor: "#eef6f7",
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: "center",
-    alignItems: "center",
-    alignSelf: "center",
-    marginBottom: 8,
-  },
-  emoji: {
-    fontSize: 24,
-  },
-  routineName: {
-    fontSize: 14,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  progressBar: {
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#e0e0e0",
-    marginBottom: 4,
-  },
-  progressText: {
-    fontSize: 12,
-    textAlign: "center",
-    color: "#888",
+    color: THEME_COLOR,
   },
   taskItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: CARD_BACKGROUND,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    marginHorizontal: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   taskAvatar: {
-    backgroundColor: "#eef6f7",
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
+    backgroundColor: THEME_COLOR_LIGHT,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
   },
   taskEmoji: {
-    fontSize: 20,
+    fontSize: 24,
   },
   taskDetails: {
     flex: 1,
+    marginRight: 8,
   },
   taskName: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#333",
+    fontSize: 16,
+    fontWeight: '600',
+    color: TEXT_PRIMARY,
+    marginBottom: 4,
   },
   taskTime: {
-    fontSize: 12,
-    color: "#888",
+    fontSize: 14,
+    color: TEXT_SECONDARY,
   },
-  fullDeleteBackground: {
+  noRoutineContainer: {
     flex: 1,
-    backgroundColor: "red",
-    justifyContent: "center",
-    alignItems: "flex-end",
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    marginTop: 40,
+  },
+  emptyStateAnimation: {
+    width: 200,
+    height: 200,
+    marginBottom: 24,
+  },
+  noRoutineText: {
+    fontSize: 18,
+    color: TEXT_PRIMARY,
+    marginBottom: 24,
+    textAlign: 'center',
     paddingHorizontal: 20,
-    borderRadius: 8,
-    marginTop: 8,
+  },
+  generateButton: {
+    backgroundColor: THEME_COLOR,
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 12,
+    shadowColor: THEME_COLOR,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  generateButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    zIndex: 1,
+  },
+  sidebarToggle: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 2,
+    padding: 12,
+    borderRadius: 20,
+    backgroundColor: THEME_COLOR_LIGHT,
   },
   welcomeContainer: {
     marginTop: 50,
@@ -994,11 +1122,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginLeft: 10,
   },
-  sidebarToggle: {
-    marginRight: 10,
-    marginTop: 40,
-    alignSelf: "flex-end",
-  },
   sidebar: {
     position: "absolute",
     right: 0,
@@ -1040,5 +1163,14 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 16,
     marginLeft: 10,
+  },
+  fullDeleteBackground: {
+    flex: 1,
+    backgroundColor: "red",
+    justifyContent: "center",
+    alignItems: "flex-end",
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginTop: 8,
   },
 });
