@@ -778,11 +778,11 @@ const HomeScreen = () => {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <LinearGradient
-        colors={[BACKGROUND_COLOR, '#FFFFFF']}
+        colors={[BACKGROUND_COLOR, 'rgba(197, 110, 50, 0.7)']}
         style={styles.gradientBackground}
       >
         <TouchableOpacity style={styles.sidebarToggle} onPress={toggleSidebar}>
-          <Icon name="menu-outline" size={30} color="#fff" />
+          <Icon name="menu-outline" size={30} color="black" />
         </TouchableOpacity>
         
         {isSidebarVisible && (
@@ -896,7 +896,7 @@ const styles = StyleSheet.create({
     paddingTop: 60, // Add space for the status bar and menu button
   },
   analysisSection: {
-    paddingTop: 20,
+    // paddingTop: 20,
     paddingBottom: 20,
     marginBottom: 10,
   },
@@ -1075,8 +1075,8 @@ const styles = StyleSheet.create({
     right: 20,
     zIndex: 2,
     padding: 12,
-    borderRadius: 20,
-    backgroundColor: THEME_COLOR_LIGHT,
+    // borderRadius: 20,
+    // backgroundColor: THEME_COLOR_LIGHT,
   },
   welcomeContainer: {
     marginTop: 50,
