@@ -1,0 +1,12 @@
+services:
+  - name: flexiplan-backend
+    type: web
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn backend.wsgi --log-file -
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        value: e%5%mc(=kpl7#1v%si^_8(tj8m29!6m2bd%iqw0!4*+wkx^l()
+      - key: DATABASE_URL
+        value: postgresql://flexiplan_db_user:7TJx85zqs64OAYCC3vnFANlzJF4mkBto@dpg-d0iflu2dbo4c73am1ho0-a.singapore-postgres.render.com/flexiplan_db
+    autoDeploy: true

@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+import dj_database_url
 import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -20,7 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'your-default-secret-key-here'
+SECRET_KEY = 'e%5%mc(=kpl7#1v%si^_8(tj8m29!6m2bd%iqw0!4*+wkx^l()'
 
 # Google Gemini API Key
 # Get your API key from: https://makersuite.google.com/app/apikey
@@ -29,7 +30,7 @@ GEMINI_API_KEY = "AIzaSyCFCSleVdgC4N-DE3K3L2ENTS7KR72kbSk"  # Replace this with 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '192.168.100.6', '192.168.0.105', '10.0.2.174', '192.168.1.119', '192.168.100.189', '192.168.0.101']  # Add the IP address of your machine
+ALLOWED_HOSTS = ['postgresql://flexiplan_db_user:7TJx85zqs64OAYCC3vnFANlzJF4mkBto@dpg-d0iflu2dbo4c73am1ho0-a.singapore-postgres.render.com/flexiplan_db','127.0.0.1', 'localhost', '192.168.100.6', '192.168.0.105', '10.0.2.174', '192.168.1.119', '192.168.100.189', '192.168.0.101']  # Add the IP address of your machine
 
 GOOGLE_API_KEY= "AIzaSyBeIcQDtjdN3xcaDYqLexochY8uwmhaiEw"
 
@@ -100,15 +101,24 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'flexiplan',
-        'USER': 'postgres',
-        'PASSWORD': 'postgres',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
+    'default': dj_database_url.config(default='postgresql://flexiplan_db_user:7TJx85zqs64OAYCC3vnFANlzJF4mkBto@dpg-d0iflu2dbo4c73am1ho0-a.singapore-postgres.render.com/flexiplan_db')
 }
+
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'flexiplan',
+#         'USER': 'postgres',
+#         'PASSWORD': 'superuser@flexiplan',
+#         'HOST': 'localhost',
+#         'PORT': '5432',
+#     }
+# }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
