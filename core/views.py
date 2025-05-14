@@ -1,4 +1,5 @@
 from datetime import date, datetime, timedelta
+from tokenize import TokenError
 from django.contrib.auth import authenticate
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -49,6 +50,40 @@ class LoginView(APIView):
 
         # If authentication fails, return an error message
         return Response({"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+
+class RefreshTokenView(APIView):
+    permission_classes = []  # Allow unauthenticated access since they're refreshing token
+    
+    def post(self, request):
+        refresh_token = request.data.get('refresh')
+        
+        if not refresh_token:
+            return Response(
+                {"error": "Refresh token is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Create a RefreshToken instance from the provided token
+            refresh = RefreshToken(refresh_token)
+            
+            # Generate a new access token
+            new_access_token = str(refresh.access_token)
+            
+            return Response({
+                "access": new_access_token
+            }, status=status.HTTP_200_OK)
+            
+        except TokenError as e:
+            return Response(
+                {"error": "Invalid or expired refresh token"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 # API for user-specific tasks

@@ -1,9 +1,10 @@
 from django.urls import path
-from .views import MarkActivityCompletedView, RemoveActivityFromRoutineView, SignupView, LoginView, UserRoutineView, UserTaskDetailView, UserTasksView, UploadUserPfp
+from .views import MarkActivityCompletedView, RefreshTokenView, RemoveActivityFromRoutineView, SignupView, LoginView, UserRoutineView, UserTaskDetailView, UserTasksView, UploadUserPfp
 
 urlpatterns = [
     path('signup/', SignupView.as_view(), name='signup'),
     path('login/', LoginView.as_view(), name='login'),
+    path('refresh-token/', RefreshTokenView.as_view(), name='refresh-token'),
     path('users/<int:user_id>/tasks/', UserTasksView.as_view(), name='user-tasks'), 
     path('users/<int:user_id>/tasks/<int:task_id>/', UserTaskDetailView.as_view(), name='user-task-detail'),
     path('users/<int:user_id>/update-task/<int:task_id>/', UserTaskDetailView.as_view(), name='user-task-update'),
