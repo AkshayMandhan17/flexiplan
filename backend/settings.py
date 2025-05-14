@@ -29,7 +29,7 @@ GEMINI_API_KEY = "AIzaSyCFCSleVdgC4N-DE3K3L2ENTS7KR72kbSk"  # Replace this with 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '192.168.100.6', '192.168.0.105', '10.0.2.174', '192.168.0.101', '192.168.100.189', '192.168.0.101']  # Add the IP address of your machine
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '192.168.100.6', '192.168.0.105', '10.0.2.174', '192.168.1.119', '192.168.100.189', '192.168.0.101']  # Add the IP address of your machine
 
 GOOGLE_API_KEY= "AIzaSyBeIcQDtjdN3xcaDYqLexochY8uwmhaiEw"
 

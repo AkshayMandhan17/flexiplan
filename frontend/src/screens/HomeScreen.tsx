@@ -384,6 +384,7 @@ const HomeScreen = () => {
           setWeeklyRoutineData(updatedRoutine);
         }
       }
+      fetchRoutine();
     } catch (error: any) {
       console.error("Error toggling off-day:", error);
       Alert.alert("Error", error.message || "Failed to toggle off-day.");

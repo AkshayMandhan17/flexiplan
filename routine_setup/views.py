@@ -223,16 +223,21 @@ class GenerateRoutineView(APIView):
         }
 
         prompt = f"""
-           Today's date is {today.strftime('%Y-%m-%d')}. It is {today_str}.
+        Today's date is {today.strftime('%Y-%m-%d')}. It is {today_str}.
             Generate a fun and relaxing routine filled with the user's hobbies: {json.dumps(user_hobbies)}
             and ample time for rest. The day should start no earlier than {user_settings['day_start_time']} and end no later than {user_settings['day_end_time']}.
+
+            **Important Instructions:**
+            - For each activity, the type must be either "hobby" or "task" only.
+            - If the activity comes from the user's hobbies list, use type "hobby".
+            - For all other activities (including rest, meals, etc.), use type "task".
 
             **Output Format:**
 
             Return the weekly routine as a human-readable TEXT, with each day clearly marked in **bold markdown** (e.g., **Monday**).  For each day, list the activities as markdown list items (*). Each activity line should follow this format:
 
-            Start Time - End Time: Activity Name (Activity Type) 
-            (e.g., * 07:00 - 08:00: Morning Yoga (Hobby)). 
+            Start Time - End Time: Activity Name (Activity Type: hobby/task) 
+            (e.g., * 07:00 - 08:00: Morning Yoga (hobby)). 
 
             Do NOT return JSON. Return plain TEXT in the format described above.
 
@@ -245,11 +250,30 @@ class GenerateRoutineView(APIView):
             if response.text:
                 try:
                     off_day_routine = parse_routine_text(response.text)
-                    if today_str in off_day_routine and off_day_routine[today_str]:  # Check key presence and not empty
-                        current_routine.routine_data[today_str] = off_day_routine[today_str] # update routine for today
+                    if today_str in off_day_routine and off_day_routine[today_str]:
+                        # Normalize activity types to only "hobby" or "task"
+                        normalized_activities = []
+                        for activity in off_day_routine[today_str]:
+                            # Determine if activity is a hobby
+                            is_hobby = any(
+                                hobby['name'].lower() in activity['activity'].lower() 
+                                for hobby in user_hobbies
+                            )
+                            
+                            normalized_activity = {
+                                "type": "hobby" if is_hobby else "task",
+                                "activity": activity['activity'],
+                                "end_time": activity['end_time'],
+                                "start_time": activity['start_time'],
+                                "is_completed": False
+                            }
+                            normalized_activities.append(normalized_activity)
+                        
+                        # Update routine with normalized activities
+                        current_routine.routine_data[today_str] = normalized_activities
                         current_routine.save()
-                        return Response({"routine": current_routine.routine_data}, status=status.HTTP_200_OK)  # Return the complete, updated routine.
-                    else:  # Handle Model not returning today_str.
+                        return Response({"routine_data": current_routine.routine_data}, status=status.HTTP_200_OK)
+                    else:
                         return Response({"error": f"The model did not return a routine for {today_str} or returned an empty routine. Raw response:\n{response.text}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
                 except Exception as parsing_error:
