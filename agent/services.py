@@ -31,19 +31,27 @@ class AgentService:
         
         # Create a more specific prompt template
         self.prompt = PromptTemplate(
-            input_variables=["history", "input"],
-            template="""You are a task management assistant. Guide users through providing required information step-by-step.
-            When creating tasks, collect: task_name, time_required (HH:MM:SS), days_associated (comma-separated days), 
-            priority (High/Medium/Low), is_fixed_time (yes/no), and fixed_time_slot if needed.
-            
-            For hobbies: collect name and category.
-            
-            Current conversation state:
-            {history}
-            
-            User: {input}
-            Assistant:"""
-        )
+        input_variables=["history", "input"],
+        template="""You are a friendly task and hobby management assistant. Your main functions are:
+        1. Help users manage their tasks and hobbies
+        2. Create new tasks by collecting required information
+        3. Add new hobbies to users' profiles
+        4. Show existing tasks and hobbies
+        5. Answer questions about task and hobby management
+
+        When creating tasks, collect: task_name, time_required (HH:MM:SS), days_associated (comma-separated days), 
+        priority (High/Medium/Low), is_fixed_time (yes/no), and fixed_time_slot if needed.
+        
+        For hobbies: collect name and category.
+        
+        If the user's request isn't about tasks or hobbies, provide a helpful response and suggest task/hobby related actions.
+        
+        Current conversation state:
+        {history}
+        
+        User: {input}
+        Assistant:"""
+    )
         
         self.memory = ConversationBufferMemory()
         self.conversation_chain = ConversationChain(
@@ -115,6 +123,36 @@ class AgentService:
             self._initialize_agent_state('create_hobby')
             return "Let's add a new hobby! What's the name of the hobby?"
         return self._handle_general_conversation(message)
+
+    def _handle_general_conversation(self, message: str) -> str:
+        try:
+            # Check for task/hobby list requests
+            if any(keyword in message.lower() for keyword in ['show tasks', 'list tasks', 'my tasks']):
+                return self.tools[2]._run(self.user_id)  # GetUserTasksTool
+            
+            if any(keyword in message.lower() for keyword in ['show hobbies', 'list hobbies', 'my hobbies']):
+                return self.tools[3]._run(self.user_id)  # GetUserHobbiesTool
+
+            # Use conversation chain for general chat
+            response = self.conversation_chain.predict(input=message)
+            
+            # Add default suggestions if the conversation is not productive
+            if not any(keyword in response.lower() for keyword in ['task', 'hobby', 'schedule']):
+                response += "\n\nI can help you with:\n" + \
+                        "- Creating new tasks ('add task')\n" + \
+                        "- Adding hobbies ('add hobby')\n" + \
+                        "- Viewing your tasks ('show tasks')\n" + \
+                        "- Viewing your hobbies ('show hobbies')"
+            
+            return response
+
+        except Exception as e:
+            return "I'm here to help with managing your tasks and hobbies. " + \
+                "You can ask me to:\n" + \
+                "- Create a new task\n" + \
+                "- Add a hobby\n" + \
+                "- Show your tasks\n" + \
+                "- Show your hobbies"
 
     def _get_required_fields(self, intent: str, data: Dict) -> list:
         fields = {
@@ -236,7 +274,21 @@ class AgentService:
         self.agent_state.save()
 
     def _is_task_creation_request(self, message: str) -> bool:
-        return any(keyword in message.lower() for keyword in ['task', 'create task'])
+    # ...existing code...
+        creation_phrases = [
+            'create task',
+            'add task', 
+            'new task',
+            'make task'
+        ]
+        return any(phrase in message.lower() for phrase in creation_phrases)
 
     def _is_hobby_creation_request(self, message: str) -> bool:
-        return any(keyword in message.lower() for keyword in ['hobby', 'add hobby'])
+        # ...existing code...
+        creation_phrases = [
+            'create hobby',
+            'add hobby',
+            'new hobby',
+            'make hobby'
+        ]
+        return any(phrase in message.lower() for phrase in creation_phrases)
