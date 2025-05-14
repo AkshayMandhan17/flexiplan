@@ -20,34 +20,21 @@ const getAuthHeaders = async () => {
   };
 };
 
-export const fetchHobbies = async () => {
+// Helper function to make authenticated requests
+const makeAuthenticatedRequest = async (endpoint: string, options: RequestInit = {}) => {
   try {
-    const accessToken = await AsyncStorage.getItem("access_token");
-    const response = await fetch(`${API_BASE_URL}/api/hobbies/`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }); // API endpoint for hobbies
+    // First refresh the token
+    const newAccessToken = await refreshToken();
+    
+    // Add auth headers to the request
+    const headers = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${newAccessToken}`,
+      ...options.headers,
+    };
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data; // Return the array of hobbies
-  } catch (error) {
-    console.error("Error fetching hobbies:", error);
-    throw error;
-  }
-};
-
-export const fetchUserDetails = async (): Promise<User> => {
-  try {
-    const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/users/details/`, {
-      method: "GET",
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
       headers,
     });
 
@@ -56,6 +43,27 @@ export const fetchUserDetails = async (): Promise<User> => {
       throw new Error(data.error || `HTTP error! Status: ${response.status}`);
     }
 
+    return response;
+  } catch (error) {
+    console.error("Error in authenticated request:", error);
+    throw error;
+  }
+};
+
+export const fetchHobbies = async () => {
+  try {
+    const response = await makeAuthenticatedRequest('/api/hobbies/');
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching hobbies:", error);
+    throw error;
+  }
+};
+
+export const fetchUserDetails = async (): Promise<User> => {
+  try {
+    const response = await makeAuthenticatedRequest('/api/users/details/');
     const data: User = await response.json();
     return data;
   } catch (error: any) {
@@ -65,9 +73,7 @@ export const fetchUserDetails = async (): Promise<User> => {
   }
 };
 
-export const fetchPublicUserDetails = async (
-  username: string
-): Promise<User> => {
+export const fetchPublicUserDetails = async (username: string): Promise<User> => {
   try {
     const response = await fetch(`${API_BASE_URL}/api/users/${username}/`, {
       method: "GET",
@@ -89,21 +95,9 @@ export const fetchPublicUserDetails = async (
 
 export const fetchUsers = async () => {
   try {
-    const accessToken = await AsyncStorage.getItem("access_token");
-    const response = await fetch(`${API_BASE_URL}/api/users/`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch users");
-    }
-
+    const response = await makeAuthenticatedRequest('/api/users/');
     const data = await response.json();
-    return data; // Return the array of users
+    return data;
   } catch (error) {
     console.error("Error fetching users:", error);
     throw error;
@@ -175,22 +169,7 @@ export const signup = async (
 
 export const fetchUserHobbies = async (userId: number) => {
   try {
-    const accessToken = await AsyncStorage.getItem("access_token");
-    const response = await fetch(
-      `${API_BASE_URL}/api/user/${userId}/hobbies/`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
+    const response = await makeAuthenticatedRequest(`/api/user/${userId}/hobbies/`);
     const data = await response.json();
     return data;
   } catch (error) {
@@ -201,53 +180,24 @@ export const fetchUserHobbies = async (userId: number) => {
 
 export const addUserHobby = async (userId: number, hobbyId: number) => {
   try {
-    const accessToken = await AsyncStorage.getItem("access_token");
-    const response = await fetch(
-      `${API_BASE_URL}/api/user/${userId}/hobbies/`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ hobby_id: hobbyId }),
-      }
-    );
+    const response = await makeAuthenticatedRequest(`/api/user/${userId}/hobbies/`, {
+      method: "POST",
+      body: JSON.stringify({ hobby_id: hobbyId }),
+    });
 
     const data = await response.json();
-
-    if (!response.ok) {
-      // Let the calling function handle the alert
-      const errorMessage = data?.error || "Unknown error occurred";
-      throw new Error(errorMessage);
-    }
-
     return data;
   } catch (error: any) {
     console.error("Error adding user hobby:", error);
-    throw error; // Rethrow to let the screen catch it
+    throw error;
   }
 };
 
 export const deleteUserHobby = async (userId: number, hobbyId: number) => {
   try {
-    const accessToken = await AsyncStorage.getItem("access_token");
-    const response = await fetch(
-      `${API_BASE_URL}/api/user/${userId}/hobbies/delete/${hobbyId}/`,
-      {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
-    return;
+    await makeAuthenticatedRequest(`/api/user/${userId}/hobbies/delete/${hobbyId}/`, {
+      method: "DELETE",
+    });
   } catch (error) {
     console.error("Error deleting user hobby:", error);
     throw error;
@@ -256,48 +206,23 @@ export const deleteUserHobby = async (userId: number, hobbyId: number) => {
 
 export const addUserTask = async (userId: number, taskData: TaskFormData) => {
   try {
-    const accessToken = await AsyncStorage.getItem("access_token");
-    const response = await fetch(`${API_BASE_URL}/api/users/${userId}/tasks/`, {
+    const response = await makeAuthenticatedRequest(`/api/users/${userId}/tasks/`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify(taskData), // ✅ Send taskData as the request body
+      body: JSON.stringify(taskData),
     });
 
     const data = await response.json();
-
-    if (!response.ok) {
-      // Use the error message from the API
-      const errorMessage = data.error || "Failed to add task"; // ✅ Updated error message
-      Alert.alert("Error", errorMessage);
-      return; // Early return
-    }
-
     return data;
   } catch (error: any) {
-    console.error("Error adding user task:", error); // ✅ Updated console log message
-    Alert.alert("Error", error.message || "Failed to add task."); // ✅ Updated alert message
+    console.error("Error adding user task:", error);
+    Alert.alert("Error", error.message || "Failed to add task.");
     throw error;
   }
 };
 
 export const fetchUserTasks = async (userId: number) => {
   try {
-    const accessToken = await AsyncStorage.getItem("access_token");
-    const response = await fetch(`${API_BASE_URL}/api/users/${userId}/tasks/`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
+    const response = await makeAuthenticatedRequest(`/api/users/${userId}/tasks/`);
     const data = await response.json();
     return data;
   } catch (error) {
@@ -308,23 +233,9 @@ export const fetchUserTasks = async (userId: number) => {
 
 export const deleteUserTask = async (userId: number, taskId: number) => {
   try {
-    const accessToken = await AsyncStorage.getItem("access_token");
-    const response = await fetch(
-      `${API_BASE_URL}/api/users/${userId}/tasks/${taskId}/`,
-      {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
-    return;
+    await makeAuthenticatedRequest(`/api/users/${userId}/tasks/${taskId}/`, {
+      method: "DELETE",
+    });
   } catch (error) {
     console.error("Error deleting user task:", error);
     throw error;
@@ -337,20 +248,10 @@ export const updateUserTask = async (
   taskData: TaskFormData
 ) => {
   try {
-    const headers = await getAuthHeaders();
-    const response = await fetch(
-      `${API_BASE_URL}/api/users/${userId}/update-task/${taskId}/`,
-      {
-        method: "PUT",
-        headers,
-        body: JSON.stringify(taskData),
-      }
-    );
-
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.error || `HTTP error! Status: ${response.status}`);
-    }
+    const response = await makeAuthenticatedRequest(`/api/users/${userId}/update-task/${taskId}/`, {
+      method: "PUT",
+      body: JSON.stringify(taskData),
+    });
 
     const data = await response.json();
     return data;
@@ -364,21 +265,11 @@ export const updateUserTask = async (
 // Send a friend request
 export const sendFriendRequest = async (toUserId: number) => {
   try {
-    const headers = await getAuthHeaders();
-    const response = await fetch(
-      `${API_BASE_URL}/api/friends/send/${toUserId}/`,
-      {
-        method: "POST",
-        headers,
-      }
-    );
+    const response = await makeAuthenticatedRequest(`/api/friends/send/${toUserId}/`, {
+      method: "POST",
+    });
 
     const data = await response.json();
-    if (!response.ok) {
-      Alert.alert("Error", data.error || "Failed to send friend request.");
-      return;
-    }
-
     return data;
   } catch (error: any) {
     console.error("Error sending friend request:", error);
@@ -388,37 +279,18 @@ export const sendFriendRequest = async (toUserId: number) => {
 };
 
 // Respond to a friend request (Accept or Reject)
-export const respondToFriendRequest = async (
-  requestId: number,
-  action: "Accept" | "Reject"
-) => {
+export const respondToFriendRequest = async (requestId: number, action: "Accept" | "Reject") => {
   try {
-    const headers = await getAuthHeaders();
-    const response = await fetch(
-      `${API_BASE_URL}/api/friends/respond/${requestId}/`,
-      {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ action }),
-      }
-    );
+    const response = await makeAuthenticatedRequest(`/api/friends/respond/${requestId}/`, {
+      method: "POST",
+      body: JSON.stringify({ action }),
+    });
 
     const data = await response.json();
-    if (!response.ok) {
-      Alert.alert(
-        "Error",
-        data.error || "Failed to respond to friend request."
-      );
-      return;
-    }
-
     return data;
   } catch (error: any) {
     console.error("Error responding to friend request:", error);
-    Alert.alert(
-      "Error",
-      error.message || "Failed to respond to friend request."
-    );
+    Alert.alert("Error", error.message || "Failed to respond to friend request.");
     throw error;
   }
 };
@@ -426,34 +298,21 @@ export const respondToFriendRequest = async (
 // List all friends of the authenticated user
 export const fetchFriends = async () => {
   try {
-    const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/friends/list/`, {
-      method: "GET",
-      headers,
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch friends");
-    }
-
+    const response = await makeAuthenticatedRequest('/api/friends/list/');
     const data = await response.json();
-
-    // Map API response to match the expected structure
-    return data.map(
-      (friend: {
-        id: number;
-        username: string;
-        first_name: string;
-        last_name: string;
-        profile_picture: string;
-      }) => ({
-        id: friend.id,
-        name: friend.username,
-        first_name: friend.first_name,
-        last_name: friend.last_name,
-        profile_picture: friend.profile_picture,
-      })
-    );
+    return data.map((friend: {
+      id: number;
+      username: string;
+      first_name: string;
+      last_name: string;
+      profile_picture: string;
+    }) => ({
+      id: friend.id,
+      name: friend.username,
+      first_name: friend.first_name,
+      last_name: friend.last_name,
+      profile_picture: friend.profile_picture,
+    }));
   } catch (error) {
     console.error("Error fetching friends:", error);
     throw error;
@@ -463,19 +322,9 @@ export const fetchFriends = async () => {
 // Remove a friend
 export const removeFriend = async (friendId: number) => {
   try {
-    const headers = await getAuthHeaders();
-    const response = await fetch(
-      `${API_BASE_URL}/api/friends/remove/${friendId}/`,
-      {
-        method: "DELETE",
-        headers,
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error("Failed to remove friend");
-    }
-
+    const response = await makeAuthenticatedRequest(`/api/friends/remove/${friendId}/`, {
+      method: "DELETE",
+    });
     return await response.json();
   } catch (error) {
     console.error("Error removing friend:", error);
@@ -485,16 +334,7 @@ export const removeFriend = async (friendId: number) => {
 
 export const fetchFriendshipDetails = async () => {
   try {
-    const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/friends/details/`, {
-      method: "GET",
-      headers,
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch friendship details");
-    }
-
+    const response = await makeAuthenticatedRequest('/api/friends/details/');
     return await response.json();
   } catch (error) {
     console.error("Error fetching friendship details:", error);
@@ -504,21 +344,8 @@ export const fetchFriendshipDetails = async () => {
 
 export const fetchUserRoutines = async (): Promise<UserRoutineResponse> => {
   try {
-    const accessToken = await AsyncStorage.getItem("access_token");
-    const response = await fetch(`${API_BASE_URL}/api/user-routine/`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
-    const data: UserRoutineResponse =
-      (await response.json()) as UserRoutineResponse;
+    const response = await makeAuthenticatedRequest('/api/user-routine/');
+    const data: UserRoutineResponse = await response.json();
     return data;
   } catch (error) {
     console.error("Error fetching user routines:", error);
@@ -528,24 +355,9 @@ export const fetchUserRoutines = async (): Promise<UserRoutineResponse> => {
 
 export const fetchFriendRequests = async (): Promise<FriendRequest[]> => {
   try {
-    const accessToken = await AsyncStorage.getItem("access_token");
-    const response = await fetch(`${API_BASE_URL}/api/friends/requests/`, {
-      // Replace with your actual endpoint
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to fetch friend requests: HTTP ${response.status}`
-      );
-    }
-
+    const response = await makeAuthenticatedRequest('/api/friends/requests/');
     const data = await response.json();
-    return data as FriendRequest[]; // Type assertion
+    return data as FriendRequest[];
   } catch (error: any) {
     console.error("Error fetching friend requests:", error);
     Alert.alert("Error", error.message || "Failed to fetch friend requests.");
@@ -556,17 +368,7 @@ export const fetchFriendRequests = async (): Promise<FriendRequest[]> => {
 // Get all messages between the authenticated user and a friend
 export const fetchMessages = async (friendId: number) => {
   try {
-    const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/messages/${friendId}/`, {
-      method: "GET",
-      headers,
-    });
-
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.error || "Failed to fetch messages");
-    }
-
+    const response = await makeAuthenticatedRequest(`/api/messages/${friendId}/`);
     return await response.json();
   } catch (error: any) {
     console.error("Error fetching messages:", error);
@@ -578,21 +380,10 @@ export const fetchMessages = async (friendId: number) => {
 // Send a message to a friend
 export const sendMessage = async (friendId: number, message: string) => {
   try {
-    const headers = await getAuthHeaders();
-    const response = await fetch(
-      `${API_BASE_URL}/api/messages/${friendId}/send/`,
-      {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ message }),
-      }
-    );
-
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.error || "Failed to send message");
-    }
-
+    const response = await makeAuthenticatedRequest(`/api/messages/${friendId}/send/`, {
+      method: "POST",
+      body: JSON.stringify({ message }),
+    });
     return await response.json();
   } catch (error: any) {
     console.error("Error sending message:", error);
@@ -604,20 +395,9 @@ export const sendMessage = async (friendId: number, message: string) => {
 // Mark messages from a friend as read
 export const markMessagesAsRead = async (friendId: number) => {
   try {
-    const headers = await getAuthHeaders();
-    const response = await fetch(
-      `${API_BASE_URL}/api/messages/${friendId}/mark-read/`,
-      {
-        method: "POST",
-        headers,
-      }
-    );
-
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.error || "Failed to mark messages as read");
-    }
-
+    const response = await makeAuthenticatedRequest(`/api/messages/${friendId}/mark-read/`, {
+      method: "POST",
+    });
     return await response.json();
   } catch (error: any) {
     console.error("Error marking messages as read:", error);
@@ -628,26 +408,11 @@ export const markMessagesAsRead = async (friendId: number) => {
 
 export const generateRoutine = async (userId: number) => {
   try {
-    const accessToken = await AsyncStorage.getItem("access_token");
-    const response = await fetch(
-      `${API_BASE_URL}/api/generate-routine/${userId}/`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
+    const response = await makeAuthenticatedRequest(`/api/generate-routine/${userId}/`, {
+      method: "POST",
+    });
 
     const data = await response.json();
-
-    if (!response.ok) {
-      const errorMessage = data.error || "Failed to generate routine";
-      Alert.alert("Error", errorMessage);
-      return;
-    }
-
     return data.routine as RoutineData;
   } catch (error: any) {
     console.error("Error generating routine:", error);
@@ -658,26 +423,11 @@ export const generateRoutine = async (userId: number) => {
 
 export const updateRoutine = async (userId: number) => {
   try {
-    const accessToken = await AsyncStorage.getItem("access_token");
-    const response = await fetch(
-      `${API_BASE_URL}/api/generate-routine/${userId}/`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
+    const response = await makeAuthenticatedRequest(`/api/generate-routine/${userId}/`, {
+      method: "PUT",
+    });
 
     const data = await response.json();
-
-    if (!response.ok) {
-      const errorMessage = data.error || "Failed to update routine";
-      Alert.alert("Error", errorMessage);
-      return;
-    }
-
     return data.routine as RoutineData;
   } catch (error: any) {
     console.error("Error updating routine:", error);
@@ -689,34 +439,17 @@ export const updateRoutine = async (userId: number) => {
 // Upload user profile picture
 export const uploadUserPfp = async (profilePicture: string) => {
   try {
-    // Get authentication headers
-    const headers = await getAuthHeaders();
-
-    // Make API request to upload profile picture
-    const response = await fetch(`${API_BASE_URL}/api/upload-pfp/`, {
+    const response = await makeAuthenticatedRequest('/api/upload-pfp/', {
       method: "PUT",
-      headers,
-      body: JSON.stringify({
-        profile_picture: profilePicture, // Send the profile picture as a string (URL or base64)
-      }),
+      body: JSON.stringify({ profile_picture: profilePicture }),
     });
 
     const data = await response.json();
-
-    if (!response.ok) {
-      const errorMessage = data.error || "Failed to upload profile picture";
-      Alert.alert("Error", errorMessage);
-      return;
-    }
-
-    // Handle success response (optional)
     Alert.alert("Success", "Profile picture uploaded successfully!");
-    return data; // Return the response (e.g., updated user data)
-  } catch (error) {
+    return data;
+  } catch (error: any) {
     console.error("Error uploading profile picture:", error);
-    const errorMessage =
-      (error as any).message || "Failed to upload profile picture.";
-    Alert.alert("Error", errorMessage);
+    Alert.alert("Error", error.message || "Failed to upload profile picture.");
     throw error;
   }
 };
@@ -725,18 +458,10 @@ export const uploadUserPfp = async (profilePicture: string) => {
 export const chatApi = {
   sendMessage: async (message: string): Promise<ChatResponse> => {
     try {
-      const headers = await getAuthHeaders();
-      const response = await fetch(`${API_BASE_URL}/api/agent/chat/`, {
+      const response = await makeAuthenticatedRequest('/api/agent/chat/', {
         method: "POST",
-        headers,
         body: JSON.stringify({ message }),
       });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to send message");
-      }
-
       return await response.json();
     } catch (error) {
       console.error("Error sending message:", error);
@@ -746,17 +471,7 @@ export const chatApi = {
 
   getMessages: async (): Promise<{ messages: Message[] }> => {
     try {
-      const headers = await getAuthHeaders();
-      const response = await fetch(`${API_BASE_URL}/api/agent/chat/`, {
-        method: "GET",
-        headers,
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to fetch messages");
-      }
-
+      const response = await makeAuthenticatedRequest('/api/agent/chat/');
       return await response.json();
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -772,52 +487,28 @@ export const markActivityCompleted = async (
   isCompleted: boolean = true
 ) => {
   try {
-    const headers = await getAuthHeaders();
-    const response = await fetch(
-      `${API_BASE_URL}/api/routine/mark-completed/`,
-      {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          day,
-          activity_name: activityName,
-          activity_type: activityType,
-          is_completed: isCompleted,
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.error || `HTTP error! Status: ${response.status}`);
-    }
+    const response = await makeAuthenticatedRequest('/api/routine/mark-completed/', {
+      method: "POST",
+      body: JSON.stringify({
+        day,
+        activity_name: activityName,
+        activity_type: activityType,
+        is_completed: isCompleted,
+      }),
+    });
 
     const data = await response.json();
-    // console.log(data);
     return data;
   } catch (error: any) {
     console.error("Error marking activity as completed:", error);
-    Alert.alert(
-      "Error",
-      error.message || "Failed to mark activity as completed."
-    );
+    Alert.alert("Error", error.message || "Failed to mark activity as completed.");
     throw error;
   }
 };
 
 export const fetchRoutineAnalytics = async () => {
   try {
-    const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/routine/analytics/`, {
-      method: "GET",
-      headers,
-    });
-
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.error || `HTTP error! Status: ${response.status}`);
-    }
-
+    const response = await makeAuthenticatedRequest('/api/routine/analytics/');
     const data = await response.json();
     return {
       completion_analytics: data.completion_analytics,
@@ -841,53 +532,27 @@ export const removeActivityFromRoutine = async (
   activityType: "task" | "hobby"
 ) => {
   try {
-    const headers = await getAuthHeaders();
-    const response = await fetch(
-      `${API_BASE_URL}/api/routine/remove-activity/`,
-      {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          day,
-          activity_name: activityName,
-          activity_type: activityType,
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.error || `HTTP error! Status: ${response.status}`);
-    }
+    const response = await makeAuthenticatedRequest('/api/routine/remove-activity/', {
+      method: "POST",
+      body: JSON.stringify({
+        day,
+        activity_name: activityName,
+        activity_type: activityType,
+      }),
+    });
 
     const data = await response.json();
     return data;
   } catch (error: any) {
     console.error("Error removing activity from routine:", error);
-    Alert.alert(
-      "Error",
-      error.message || "Failed to remove activity from routine."
-    );
+    Alert.alert("Error", error.message || "Failed to remove activity from routine.");
     throw error;
   }
 };
 
 export const fetchFriendRoutine = async (friendId: number) => {
   try {
-    const headers = await getAuthHeaders();
-    const response = await fetch(
-      `${API_BASE_URL}/api/friends/${friendId}/routine/`,
-      {
-        method: "GET",
-        headers,
-      }
-    );
-
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.error || `HTTP error! Status: ${response.status}`);
-    }
-
+    const response = await makeAuthenticatedRequest(`/api/friends/${friendId}/routine/`);
     const data = await response.json();
     return {
       friend_id: data.friend_id,
@@ -899,6 +564,38 @@ export const fetchFriendRoutine = async (friendId: number) => {
   } catch (error: any) {
     console.error("Error fetching friend's routine:", error);
     Alert.alert("Error", error.message || "Failed to fetch friend's routine.");
+    throw error;
+  }
+};
+
+export const refreshToken = async () => {
+  try {
+    const refreshToken = await AsyncStorage.getItem("refresh_token");
+    if (!refreshToken) {
+      throw new Error("No refresh token found");
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/refresh-token/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ refresh: refreshToken }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to refresh token");
+    }
+
+    // Store the new access token
+    await AsyncStorage.setItem("access_token", data.access);
+    
+    return data.access;
+  } catch (error: any) {
+    console.error("Error refreshing token:", error);
+    Alert.alert("Error", error.message || "Failed to refresh token");
     throw error;
   }
 };
