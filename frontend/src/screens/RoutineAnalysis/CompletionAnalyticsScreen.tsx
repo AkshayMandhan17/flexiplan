@@ -8,20 +8,22 @@ import {
   Dimensions,
   StatusBar,
   Alert,
-  Animated, // Ensure Animated is imported
-  Easing,   // Easing can still be used with Animated
+  Animated,
+  Easing,
+  Platform,
 } from "react-native";
 import {
   BarChart,
   PieChart,
   ProgressChart,
+  LineChart,
 } from "react-native-chart-kit";
 import { Card, Surface } from "react-native-paper";
 import { fetchRoutineAnalytics } from "../../utils/api";
 import { useTheme } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 
-// Interfaces (AnalyticsData, CompletionAnalyticsCardProps) remain the same
+// Interfaces remain the same
 interface AnalyticsData {
   completion_analytics: {
     daily_completion_rates: {
@@ -76,10 +78,10 @@ interface AnalyticsData {
 interface CompletionAnalyticsCardProps {
   data: {
     activityCompletionData: Array<{
-        name: string;
-        percentage: number;
-        legendFontColor: string;
-        legendFontSize: number;
+      name: string;
+      percentage: number;
+      legendFontColor: string;
+      legendFontSize: number;
     }>;
     completion_analytics: {
       daily_completion_rates: {
@@ -94,15 +96,23 @@ interface CompletionAnalyticsCardProps {
   };
 }
 
-
-// TimeAnalyticsScreen remains largely the same as the previous corrected version
-const TimeAnalyticsScreen = ({ 
-  // ... props if any ...
- }) => {
+// Main Analytics Screen Component
+const CompletionAnalyticsScreen = () => {
   const { dark, colors } = useTheme();
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [0, 60, 90],
+    outputRange: [1, 0.8, 0],
+    extrapolate: 'clamp',
+  });
+  const headerHeight = scrollY.interpolate({
+    inputRange: [0, 100],
+    outputRange: [180, 80],
+    extrapolate: 'clamp',
+  });
 
   useEffect(() => {
     const loadAnalytics = async () => {
@@ -111,9 +121,10 @@ const TimeAnalyticsScreen = ({
         setError(null);
         const data = await fetchRoutineAnalytics();
         setAnalyticsData(data);
-      } catch (err: any) {
-        setError(err.message || "Failed to load analytics data.");
-        Alert.alert("Error", err.message || "Failed to fetch analytics data");
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Failed to load analytics data.";
+        setError(errorMessage);
+        Alert.alert("Error", errorMessage);
       } finally {
         setLoading(false);
       }
@@ -136,7 +147,6 @@ const TimeAnalyticsScreen = ({
     return {
       completion_analytics,
       activityCompletionData,
-      // Include other data slices if needed by other components
       time_analytics: analyticsData.time_analytics,
       activity_frequency: analyticsData.activity_frequency,
       weekly_patterns: analyticsData.weekly_patterns,
@@ -147,49 +157,164 @@ const TimeAnalyticsScreen = ({
 
   const chartData = prepareChartData();
 
+  const renderHeader = () => {
+    return (
+      <Animated.View style={[styles.headerContainer, { height: headerHeight }]}>
+        <LinearGradient
+          colors={dark ? ['rgba(197, 110, 50, 1)', 'rgba(197, 110, 50, 1)'] : ['rgba(197, 110, 50, 1)', 'rgba(197, 110, 50, 1)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.headerGradient}
+        >
+          <Animated.View style={[styles.headerContent, { opacity: headerOpacity }]}>
+            <Text style={styles.headerTitle}>Completion Analytics</Text>
+            <Text style={styles.headerSubtitle}>Track your routine progress</Text>
+          </Animated.View>
+        </LinearGradient>
+      </Animated.View>
+    );
+  };
+
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={dark ? "light-content" : "dark-content"} backgroundColor={colors.background} />
-      <Text style={[styles.screenTitle, { color: colors.text }]}>
-        Analytics Overview
-      </Text>
-      {loading && (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.primary || "#007AFF"} />
-          <Text style={[styles.loadingText, { color: colors.text }]}>
-            Loading Analytics...
-          </Text>
+    <View style={[styles.container, { backgroundColor: dark ? '#1A202C' : '#F7FAFC' }]}>
+      <StatusBar barStyle={dark ? "light-content" : "dark-content"} backgroundColor="transparent" translucent />
+      
+      {renderHeader()}
+      
+      <Animated.ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+        scrollEventThrottle={16}
+      >
+        <View style={styles.contentContainer}>
+          {loading && (
+            <View style={styles.centered}>
+              <ActivityIndicator size="large" color={dark ? '#6366F1' : '#4F46E5'} />
+              <Text style={[styles.loadingText, { color: colors.text }]}>
+                Loading Analytics...
+              </Text>
+            </View>
+          )}
+          
+          {error && (
+            <View style={styles.centered}>
+              <Text style={[styles.errorText, { color: '#F56565' }]}>
+                Error: {error}
+              </Text>
+            </View>
+          )}
+          
+          {!loading && !error && chartData && chartData.completion_analytics && (
+            <CompletionAnalyticsCard
+              data={{
+                completion_analytics: chartData.completion_analytics,
+                activityCompletionData: chartData.activityCompletionData,
+              }}
+            />
+          )}
+          
+          {!loading && !error && (!analyticsData || !chartData) && (
+            <View style={styles.centered}>
+              <Text style={[styles.noDataText, { color: colors.text }]}>
+                No analytics data available.
+              </Text>
+            </View>
+          )}
+          
+          {/* Stats Summary Cards */}
+          {!loading && !error && chartData && (
+            <View style={styles.statsCardsContainer}>
+              <View style={styles.statsRow}>
+                <StatCard 
+                  title="Consistency" 
+                  value={`${chartData.consistency_score.average_daily_completion.toFixed(1)}%`}
+                  icon="📊"
+                  color={dark ? '#6366F1' : '#4F46E5'}
+                />
+                <StatCard 
+                  title="Balance" 
+                  value={`${chartData.time_balance.work_life_balance_score.toFixed(1)}/10`}
+                  icon="⚖️"
+                  color={dark ? '#F59E0B' : '#F59E0B'}
+                />
+              </View>
+              <View style={styles.statsRow}>
+                <StatCard 
+                  title="Most Active" 
+                  value={chartData.weekly_patterns.most_busy_day || 'N/A'}
+                  icon="🔥"
+                  color={dark ? '#10B981' : '#059669'}
+                />
+                <StatCard 
+                  title="Avg. Daily Time" 
+                  value={`${chartData.time_analytics.average_daily_time.toFixed(1)}h`}
+                  icon="⏱️"
+                  color={dark ? '#EC4899' : '#DB2777'}
+                />
+              </View>
+            </View>
+          )}
         </View>
-      )}
-      {error && (
-        <View style={styles.centered}>
-          <Text style={[styles.errorText, { color: (colors as any).error || "#e74c3c" }]}>Error: {error}</Text>
-        </View>
-      )}
-      {!loading && !error && chartData && chartData.completion_analytics && (
-        <CompletionAnalyticsCard
-          data={{
-            completion_analytics: chartData.completion_analytics,
-            activityCompletionData: chartData.activityCompletionData,
-          }}
-        />
-      )}
-      {!loading && !error && (!analyticsData || !chartData) && (
-        <View style={styles.centered}>
-          <Text style={[styles.noDataText, { color: colors.text }]}>
-            Could not load analytics data or data is empty.
-          </Text>
-        </View>
-      )}
-    </ScrollView>
+      </Animated.ScrollView>
+    </View>
   );
 };
 
+// Stat Card Component with reduced border
+const StatCard = ({ title, value, icon, color }) => {
+  const { dark } = useTheme();
+  const animatedValue = useRef(new Animated.Value(0)).current;
+  
+  useEffect(() => {
+    Animated.timing(animatedValue, {
+      toValue: 1,
+      duration: 800,
+      delay: Math.random() * 300,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, []);
+  
+  const animatedStyle = {
+    opacity: animatedValue,
+    transform: [
+      {
+        translateY: animatedValue.interpolate({
+          inputRange: [0, 1],
+          outputRange: [20, 0],
+        }),
+      },
+    ],
+  };
+  
+  return (
+    <Animated.View style={[styles.statCard, animatedStyle]}>
+      <LinearGradient
+        colors={[`${color}15`, `${color}05`]}
+        style={styles.statCardGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.statCardContent}>
+          <View style={[styles.statIconContainer, { backgroundColor: `${color}20` }]}>
+            <Text style={styles.statIcon}>{icon}</Text>
+          </View>
+          <View style={styles.statTextContainer}>
+            <Text style={[styles.statTitle, { color: dark ? '#E2E8F0' : '#2D3748' }]}>{title}</Text>
+            <Text style={[styles.statValue, { color }]}>{value}</Text>
+          </View>
+        </View>
+      </LinearGradient>
+    </Animated.View>
+  );
+};
 
-// ===================================================================================
-// CompletionAnalyticsCard using Animated.View instead of MotiView for section animations
-// ===================================================================================
-const CompletionAnalyticsCard: React.FC<CompletionAnalyticsCardProps> = ({ data }) => {
+// Enhanced CompletionAnalyticsCard Component
+const CompletionAnalyticsCard = ({ data }: CompletionAnalyticsCardProps) => {
   const { dark, colors } = useTheme();
   const screenWidth = Dimensions.get("window").width;
   const cardEntryAnimation = useRef(new Animated.Value(0)).current;
@@ -197,46 +322,49 @@ const CompletionAnalyticsCard: React.FC<CompletionAnalyticsCardProps> = ({ data 
     Array(4).fill(null).map(() => new Animated.Value(0))
   ).current;
 
-  // Enhanced color palette (soft, pastel, modern)
-  const pastelColors = [
-    '#A7C7E7', // Light Blue
-    '#F7CAC9', // Light Pink
-    '#B5EAD7', // Light Green
-    '#FFFACD', // Lemon
-    '#FFDAC1', // Peach
-    '#E2F0CB', // Mint
-    '#CBAACB', // Lavender
-    '#FFB7B2', // Coral
-    '#B5D8FA', // Sky
-    '#F3EAC2', // Cream
-  ];
-  const chartColors = {
-    primary: dark ? '#B5A1FF' : '#A7C7E7',
-    secondary: dark ? '#FFD6E0' : '#F7CAC9',
-    success: dark ? '#B5EAD7' : '#B5EAD7',
-    warning: dark ? '#FFFACD' : '#FFFACD',
-    error: dark ? '#FFB7B2' : '#FFB7B2',
-    background: dark ? '#181A20' : '#F8F9FB',
-    surface: dark ? '#23262F' : '#FFFFFF',
-    text: dark ? '#FFFFFF' : '#23262F',
-    border: dark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)',
-    shadow: dark ? '#00000055' : '#A7C7E755',
+  // Modern color palette
+  const chartPalette = {
+    primary: dark ? '#6366F1' : '#4F46E5',
+    secondary: dark ? '#EC4899' : '#DB2777',
+    tertiary: dark ? '#10B981' : '#059669',
+    quaternary: dark ? '#F59E0B' : '#F59E0B',
+    quinary: dark ? '#8B5CF6' : '#7C3AED',
+    background: dark ? '#1A202C' : '#F7FAFC',
+    surface: dark ? '#2D3748' : '#FFFFFF',
+    surfaceVariant: dark ? '#4A5568' : '#EDF2F7',
+    text: dark ? '#F7FAFC' : '#1A202C',
+    textSecondary: dark ? '#A0AEC0' : '#4A5568',
+    border: dark ? '#4A5568' : '#E2E8F0',
+    shadow: dark ? '#00000080' : '#00000040',
   };
+
+  const chartColors = [
+    chartPalette.primary,
+    chartPalette.secondary,
+    chartPalette.tertiary,
+    chartPalette.quaternary,
+    chartPalette.quinary,
+    '#F472B6', // Pink
+    '#34D399', // Emerald
+    '#A78BFA', // Purple
+    '#FBBF24', // Amber
+    '#60A5FA', // Blue
+  ];
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(cardEntryAnimation, {
         toValue: 1,
         duration: 800,
-        easing: Easing.bezier(0.4, 0, 0.2, 1),
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
       ...sectionAnimations.map((anim, index) =>
         Animated.timing(anim, {
           toValue: 1,
           duration: 600,
-          delay: index * 200,
-          easing: Easing.bezier(0.4, 0, 0.2, 1),
+          delay: 200 + index * 150,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         })
       ),
@@ -244,27 +372,30 @@ const CompletionAnalyticsCard: React.FC<CompletionAnalyticsCardProps> = ({ data 
   }, []);
 
   const baseChartConfig = {
-    backgroundGradientFrom: chartColors.surface,
-    backgroundGradientTo: chartColors.surface,
+    backgroundGradientFrom: chartPalette.surface,
+    backgroundGradientTo: chartPalette.surface,
     backgroundGradientFromOpacity: 1,
     backgroundGradientToOpacity: 1,
     decimalPlaces: 0,
-    color: (opacity = 1, index = 0) => pastelColors[index % pastelColors.length],
-    labelColor: (opacity = 1) => chartColors.text,
-    style: { borderRadius: 20 },
+    color: (opacity = 1, index = 0) => {
+      const color = chartColors[index % chartColors.length];
+      return color + (opacity < 1 ? Math.floor(opacity * 255).toString(16).padStart(2, '0') : '');
+    },
+    labelColor: () => chartPalette.textSecondary,
+    style: { borderRadius: 16 },
     propsForDots: {
       r: "6",
       strokeWidth: "2",
-      stroke: chartColors.primary,
+      stroke: chartPalette.primary,
     },
     propsForLabels: {
-      fontSize: 13,
-      fontWeight: '400',
-      fill: chartColors.text,
+      fontSize: 12,
+      fontWeight: '600',
+      fill: chartPalette.textSecondary,
     },
     propsForBackgroundLines: {
-      strokeDasharray: "4",
-      stroke: chartColors.border,
+      strokeDasharray: "5,5",
+      stroke: chartPalette.border,
       strokeWidth: 1,
     },
   };
@@ -286,46 +417,65 @@ const CompletionAnalyticsCard: React.FC<CompletionAnalyticsCardProps> = ({ data 
       return dayOrder.indexOf(dayA) - dayOrder.indexOf(dayB);
     });
 
-  const dailyCompletionChartData = {
+  // Line chart data for trend visualization with improved visibility
+  const lineChartData = {
     labels: sortedDailyCompletionRates.map(([day]) => day.substring(0, 3)),
-    datasets: [{
-      data: sortedDailyCompletionRates.map(([, dayData]) => parseFloat(dayData.percentage.toFixed(1))),
-      colors: sortedDailyCompletionRates.map((_, i) => () => pastelColors[i % pastelColors.length]),
-    }],
+    datasets: [
+      {
+        data: sortedDailyCompletionRates.map(([, dayData]) => parseFloat(dayData.percentage.toFixed(1))),
+        color: () => chartPalette.primary,
+        strokeWidth: 3,
+      },
+      {
+        data: sortedDailyCompletionRates.map(() => 80), // Target line
+        color: () => chartPalette.quaternary + '80',
+        strokeWidth: 2,
+        withDots: false,
+      },
+    ],
+    legend: ['Completion', 'Target'],
   };
 
+  // Ensure we have min/max values for the Y axis to make labels visible
+  const completionValues = sortedDailyCompletionRates.map(([, dayData]) => parseFloat(dayData.percentage.toFixed(1)));
+  const minValue = Math.max(0, Math.min(...completionValues) - 10);
+  const maxValue = Math.min(100, Math.max(...completionValues) + 10);
+
+  // Adjusted pie chart data to prevent label collision
   const activityCompletionPieData = data.activityCompletionData.map((item, index) => ({
     ...item,
     percentage: item.percentage,
-    color: pastelColors[index % pastelColors.length],
-    legendFontColor: chartColors.text,
-    legendFontSize: 13,
+    color: chartColors[index % chartColors.length],
+    legendFontColor: chartPalette.textSecondary,
+    legendFontSize: 12,
   }));
 
   const completionByTypePieData = [
     {
       name: "Tasks",
       percentage: parseFloat(data.completion_analytics.completion_by_activity_type.task.percentage.toFixed(1)),
-      color: pastelColors[0],
-      legendFontColor: chartColors.text,
-      legendFontSize: 13,
+      color: chartColors[0],
+      legendFontColor: chartPalette.textSecondary,
+      legendFontSize: 12,
     },
     {
       name: "Hobbies",
       percentage: parseFloat(data.completion_analytics.completion_by_activity_type.hobby.percentage.toFixed(1)),
-      color: pastelColors[1],
-      legendFontColor: chartColors.text,
-      legendFontSize: 13,
+      color: chartColors[1],
+      legendFontColor: chartPalette.textSecondary,
+      legendFontSize: 12,
     },
   ].filter(item => item.percentage > 0);
 
   const overallCompletionPercentage = parseFloat(data.completion_analytics.overall_completion_rate.percentage.toFixed(1));
 
-  const getProgressColor = (percentage: number, opacity = 1) => {
-    if (percentage < 30) return `rgba(231, 76, 60, ${opacity})`;
-    if (percentage < 70) return `rgba(241, 196, 15, ${opacity})`;
-    return `rgba(46, 204, 113, ${opacity})`;
+  const getProgressColor = (percentage: number) => {
+    if (percentage < 30) return '#F56565'; // Red
+    if (percentage < 70) return '#F59E0B'; // Amber
+    return '#10B981'; // Green
   };
+
+  const progressColor = getProgressColor(overallCompletionPercentage);
 
   const renderChartSection = (title: string, chartComponent: React.ReactNode, sectionIndex: number) => {
     const animationStyle = {
@@ -343,197 +493,278 @@ const CompletionAnalyticsCard: React.FC<CompletionAnalyticsCardProps> = ({ data 
     return (
       <Animated.View style={[styles.chartSectionContainer, animationStyle]}>
         <Surface style={[styles.chartSectionSurface, {
-          backgroundColor: chartColors.surface,
-          borderColor: chartColors.border,
+          backgroundColor: chartPalette.surface,
+          borderColor: chartPalette.border,
           borderWidth: 1,
-          shadowColor: chartColors.shadow,
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.12,
-          shadowRadius: 16,
-          elevation: 8,
-        }]}
-        >
-          <LinearGradient
-            colors={[
-              `${chartColors.primary}22`,
-              `${chartColors.primary}05`,
-            ]}
-            style={styles.chartBackgroundGradient}
-          >
-            <Text style={[styles.sectionTitleNew, { color: chartColors.text, borderBottomColor: chartColors.border }]}> 
-              {title}
-            </Text>
-            <View style={styles.chartContent}>{chartComponent}</View>
-          </LinearGradient>
+          shadowColor: chartPalette.shadow,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.1,
+          shadowRadius: 12,
+          elevation: 4,
+        }]}>
+          <View style={styles.chartSectionHeader}>
+            <Text style={[styles.sectionTitle, { color: chartPalette.text }]}>{title}</Text>
+          </View>
+          <View style={styles.chartContent}>{chartComponent}</View>
         </Surface>
       </Animated.View>
     );
   };
 
-  const barChartHorizontalPadding = 24;
-  const chartAvailableWidth = screenWidth - 48 - barChartHorizontalPadding - 32 - 24;
+  const chartAvailableWidth = screenWidth - 48;
 
   return (
-    <Animated.View style={[styles.enhancedCardNew, {
-      backgroundColor: chartColors.background,
-      borderColor: chartColors.border,
-      borderWidth: 1,
-      shadowColor: chartColors.shadow,
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.13,
-      shadowRadius: 24,
-      elevation: 12,
-    }, {
+    <Animated.View style={[styles.enhancedCard, {
+      backgroundColor: 'transparent',
       opacity: cardEntryAnimation,
       transform: [
         {
           translateY: cardEntryAnimation.interpolate({
             inputRange: [0, 1],
-            outputRange: [50, 0],
+            outputRange: [30, 0],
           }),
         },
         {
           scale: cardEntryAnimation.interpolate({
             inputRange: [0, 1],
-            outputRange: [0.95, 1],
+            outputRange: [0.98, 1],
           }),
         },
       ],
-    }]}
-    >
-      <Card.Title
-        title="Completion Insights"
-        titleStyle={[styles.cardTitleNew, { color: chartColors.text, fontSize: 26, fontWeight: '800', letterSpacing: 0.2 }]}
-        subtitle="Your activity completion overview"
-        subtitleStyle={[styles.cardSubtitleNew, { color: `${chartColors.text}99`, fontWeight: '400', fontSize: 15 }]}
-      />
-      <Card.Content style={styles.cardContentNew}>
-        {/* Modern Bar Chart for Daily Completion Rates */}
-        <View style={styles.modernChartContainer}>
-          <Text style={styles.modernChartTitle}>Daily Completion Rates</Text>
-          <BarChart
-            data={dailyCompletionChartData}
-            width={chartAvailableWidth}
-            height={240}
-            chartConfig={{
-              ...baseChartConfig,
-              backgroundGradientFrom: '#f8f9fa',
-              backgroundGradientTo: '#f8f9fa',
-              fillShadowGradient: chartColors.primary,
-              fillShadowGradientOpacity: 1,
-              color: (opacity = 1) => chartColors.primary,
-              labelColor: (opacity = 1) => chartColors.text,
-              propsForLabels: {
-                fontSize: 14,
-                fontWeight: '700',
-                fill: chartColors.text,
-              },
-              propsForBackgroundLines: {
-                strokeDasharray: "4",
-                stroke: chartColors.border,
-                strokeWidth: 1,
-              },
-            }}
-            yAxisLabel=""
-            yAxisSuffix="%"
-            verticalLabelRotation={0}
-            fromZero
-            showValuesOnTopOfBars
-            withInnerLines={true}
-            style={styles.modernBarChart}
-            segments={4}
-            withCustomBarColorFromData={false}
-            flatColor={true}
-          />
-          {/* Axis labels */}
-          <View style={styles.axisLabelsRow}>
-            <Text style={styles.axisLabelY}>Completion %</Text>
-            <View style={{ flex: 1 }} />
-            <Text style={styles.axisLabelX}>Day</Text>
-          </View>
-        </View>
-        {activityCompletionPieData.length > 0 && renderChartSection("Activity Completion", (
-          <PieChart
-            data={activityCompletionPieData.map((item, index) => ({
-              ...item,
-              color: pastelColors[index % pastelColors.length],
-            }))}
-            width={chartAvailableWidth}
-            height={240}
-            chartConfig={baseChartConfig}
-            accessor="percentage"
-            backgroundColor="transparent"
-            paddingLeft="15"
-            absolute
-            hasLegend={activityCompletionPieData.length <= 5}
-            center={[chartAvailableWidth / 4, 0]}
-            avoidFalseZero
-            style={styles.chartStyleNew}
-          />
-        ), 1)}
-        {renderChartSection("Overall Completion Rate", (
-          <View style={styles.progressChartContainerNew}>
-            <ProgressChart
-              data={{data: [overallCompletionPercentage / 100]}}
+    }]}>
+      <View style={[styles.cardContent, {marginTop:20}]}>
+        {/* Daily Completion Trend Chart with improved Y-axis labels */}
+        {renderChartSection("Daily Completion Trend", (
+          <View style={styles.lineChartContainer}>
+            <LineChart
+              data={lineChartData}
               width={chartAvailableWidth}
-              height={200}
-              strokeWidth={24}
-              radius={70}
+              height={220}
               chartConfig={{
                 ...baseChartConfig,
-                color: (opacity = 1) => `rgba(167, 199, 231, ${opacity})`,
+                backgroundGradientFrom: chartPalette.surface,
+                backgroundGradientTo: chartPalette.surface,
+                color: (opacity = 1, index = 0) => index === 0 
+                  ? chartPalette.primary + (opacity < 1 ? Math.floor(opacity * 255).toString(16).padStart(2, '0') : '')
+                  : chartPalette.quaternary + (opacity < 1 ? Math.floor(opacity * 255).toString(16).padStart(2, '0') : ''),
+                strokeWidth: 3,
+                propsForDots: {
+                  r: "5",
+                  strokeWidth: "2",
+                  stroke: chartPalette.primary,
+                },
+                propsForLabels: {
+                  fontSize: 12,
+                  fontWeight: '600',
+                  fill: chartPalette.textSecondary,
+                },
+                // Improved Y-axis label visibility
+                formatYLabel: (value) => `${value}%`,
+                // Ensure Y-axis has enough range to show labels
+                min: minValue,
+                max: maxValue,
               }}
-              hideLegend
-              style={styles.chartStyleNew}
+              bezier
+              style={styles.chartStyle}
+              withInnerLines={true}
+              withOuterLines={true}
+              withShadow={false}
+              withDots={true}
+              withVerticalLines={false}
+              withHorizontalLines={true}
+              fromZero={false} // Changed to false to allow proper Y-axis scaling
+              yAxisSuffix="%"
+              yAxisInterval={20}
+              segments={4}
+              // Increased left padding for Y-axis labels
+              yAxisLabel=""
+              withVerticalLabels={true}
+              verticalLabelRotation={0}
+              xLabelsOffset={-5}
+              hidePointsAtIndex={[]}
+              getDotColor={(dataPoint, dataPointIndex) => {
+                return chartPalette.primary;
+              }}
             />
-            <View style={styles.progressTextWrapper}>
-              <Text style={[styles.progressPercentageText, { color: chartColors.primary, fontSize: 38, fontWeight: '800' }]}> 
-                {overallCompletionPercentage}%
-              </Text>
-              <Text style={[styles.progressLabelText, { color: `${chartColors.text}99`, fontWeight: '400', fontSize: 16 }]}>Overall</Text>
+            <View style={styles.chartLegend}>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendColor, { backgroundColor: chartPalette.primary }]} />
+                <Text style={[styles.legendText, { color: chartPalette.textSecondary }]}>Completion</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendColor, { backgroundColor: chartPalette.quaternary }]} />
+                <Text style={[styles.legendText, { color: chartPalette.textSecondary }]}>Target (80%)</Text>
+              </View>
             </View>
           </View>
+        ), 0)}
+
+        {/* Overall Completion Rate */}
+        {renderChartSection("Overall Completion Rate", (
+          <View style={styles.progressChartContainer}>
+            <ProgressChart
+              data={{ data: [overallCompletionPercentage / 100] }}
+              width={chartAvailableWidth - 32}
+              height={220}
+              strokeWidth={16}
+              radius={80}
+              chartConfig={{
+                ...baseChartConfig,
+                backgroundGradientFrom: chartPalette.surface,
+                backgroundGradientTo: chartPalette.surface,
+                color: () => progressColor,
+                strokeWidth: 2,
+              }}
+              hideLegend
+              style={styles.chartStyle}
+            />
+            <View style={styles.progressTextWrapper}>
+              <Text style={[styles.progressPercentageText, { color: progressColor }]}>
+                {overallCompletionPercentage}%
+              </Text>
+              <Text style={[styles.progressLabelText, { color: chartPalette.textSecondary }]}>
+                Overall Completion
+              </Text>
+              <View style={styles.progressStatusContainer}>
+                <View style={[styles.progressStatusIndicator, { backgroundColor: progressColor }]} />
+                <Text style={[styles.progressStatusText, { color: chartPalette.textSecondary }]}>
+                  {overallCompletionPercentage >= 80 ? 'Excellent' : 
+                   overallCompletionPercentage >= 60 ? 'Good' : 
+                   overallCompletionPercentage >= 40 ? 'Average' : 'Needs Improvement'}
+                </Text>
+              </View>
+            </View>
+          </View>
+        ), 1)}
+
+        {/* Activity Completion */}
+        {activityCompletionPieData.length > 0 && renderChartSection("Activity Completion", (
+          <View>
+            <PieChart
+              data={activityCompletionPieData}
+              width={chartAvailableWidth - 32}
+              height={220}
+              chartConfig={baseChartConfig}
+              accessor="percentage"
+              backgroundColor="transparent"
+              paddingLeft="15"
+              absolute
+              hasLegend={activityCompletionPieData.length <= 5}
+              center={[chartAvailableWidth / 4 - 16, 0]}
+              avoidFalseZero
+              style={styles.chartStyle}
+            />
+            {activityCompletionPieData.length > 5 && (
+              <View style={{marginTop: 16,
+    paddingHorizontal: 16,}}>
+                {activityCompletionPieData.map((item, index) => (
+                  <View key={index} style={{flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,}}>
+                    <View style={[{width: 12,
+    height: 12,
+    borderRadius: 3,
+    marginRight: 8,}, { backgroundColor: item.color }]} />
+                    <Text style={[{fontSize: 12,
+    fontWeight: '500',}, { color: chartPalette.textSecondary }]}>
+                      {item.name}: {item.percentage}%
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
         ), 2)}
+
+        {/* Completion by Type - Improved layout to avoid label collision */}
         {completionByTypePieData.length > 0 && renderChartSection("Completion by Type", (
-          <PieChart
-            data={completionByTypePieData.map((item, index) => ({
-              ...item,
-              color: pastelColors[index % pastelColors.length],
-            }))}
-            width={chartAvailableWidth}
-            height={240}
-            chartConfig={baseChartConfig}
-            accessor="percentage"
-            backgroundColor="transparent"
-            paddingLeft="15"
-            absolute
-            hasLegend={true}
-            center={[chartAvailableWidth / 4, 0]}
-            avoidFalseZero
-            style={styles.chartStyleNew}
-          />
+          <View style={styles.typeCompletionContainer}>
+            <View style={styles.pieChartWrapper}>
+              <PieChart
+                data={completionByTypePieData}
+                width={chartAvailableWidth - 32}
+                height={200}
+                chartConfig={baseChartConfig}
+                accessor="percentage"
+                backgroundColor="transparent"
+                paddingLeft="0"
+                absolute
+                hasLegend={false} // Disable built-in legend
+                center={[(chartAvailableWidth - 32) / 2 - 60, 0]}
+                avoidFalseZero
+                style={styles.chartStyle}
+              />
+            </View>
+            {/* Custom type comparison with better spacing */}
+            <View style={styles.typeComparisonContainer}>
+              <View style={styles.typeComparisonItem}>
+                <View style={[styles.typeIndicator, { backgroundColor: chartColors[0] }]} />
+                <Text style={[styles.typeLabel, { color: chartPalette.textSecondary }]}>Tasks</Text>
+                <Text style={[styles.typeValue, { color: chartPalette.text }]}>
+                  {parseFloat(data.completion_analytics.completion_by_activity_type.task.percentage.toFixed(1))}%
+                </Text>
+              </View>
+              <View style={styles.typeComparisonDivider} />
+              <View style={styles.typeComparisonItem}>
+                <View style={[styles.typeIndicator, { backgroundColor: chartColors[1] }]} />
+                <Text style={[styles.typeLabel, { color: chartPalette.textSecondary }]}>Hobbies</Text>
+                <Text style={[styles.typeValue, { color: chartPalette.text }]}>
+                  {parseFloat(data.completion_analytics.completion_by_activity_type.hobby.percentage.toFixed(1))}%
+                </Text>
+              </View>
+            </View>
+          </View>
         ), 3)}
-      </Card.Content>
+      </View>
     </Animated.View>
   );
 };
 
-// Styles remain the same as your last working version
+// Enhanced styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
   },
-  screenTitle: {
-    fontSize: 30,
-    fontWeight: "800",
-    marginBottom: 28,
-    textAlign: "center",
-    letterSpacing: 0.7,
+  headerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    overflow: 'hidden',
+  },
+  headerGradient: {
+    flex: 1,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  headerContent: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 8,
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.9)',
+  },
+  scrollContent: {
+    paddingTop: 180,
+    paddingBottom: 40,
+  },
+  contentContainer: {
+    paddingHorizontal: 16,
   },
   centered: {
-    flex: 1,
     justifyContent: "center",
     alignItems: "center",
     paddingVertical: 60,
@@ -541,93 +772,60 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 18,
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '500',
   },
   errorText: {
-    fontSize: 17,
+    fontSize: 16,
     textAlign: "center",
     paddingHorizontal: 24,
   },
   noDataText: {
     textAlign: "center",
     marginVertical: 36,
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '500',
   },
-  enhancedCardNew: {
-    marginBottom: 32,
-    borderRadius: 28,
-    overflow: 'hidden',
-    marginHorizontal: 0,
-    borderWidth: 1,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.13,
-    shadowRadius: 24,
-    elevation: 12,
+  enhancedCard: {
+    marginBottom: 24,
   },
-  cardTitleNew: {
-    fontSize: 26,
-    fontWeight: '800',
-    paddingTop: 18,
-    paddingBottom: 10,
-    paddingHorizontal: 24,
-    letterSpacing: 0.2,
-  },
-  cardSubtitleNew: {
-    fontSize: 15,
-    fontWeight: '400',
-    marginLeft: 24,
-    marginBottom: 10,
-  },
-  cardContentNew: {
-    paddingHorizontal: 0,
+  cardContent: {
     paddingBottom: 0,
   },
   chartSectionContainer: {
     width: '100%',
-    paddingHorizontal: 18,
-    marginBottom: 24,
+    marginBottom: 20,
   },
   chartSectionSurface: {
     borderRadius: 20,
-    elevation: 8,
     overflow: 'hidden',
     borderWidth: 1,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
   },
-  chartBackgroundGradient: {
-    borderRadius: 20,
-    paddingVertical: 22,
-    paddingHorizontal: 18,
+  chartSectionHeader: {
+    paddingVertical: 16,
+    paddingHorizontal: 20,
   },
-  sectionTitleNew: {
-    fontSize: 20,
+  sectionTitle: {
+    fontSize: 18,
     fontWeight: '700',
-    marginBottom: 16,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    alignSelf: 'flex-start',
-    marginLeft: 10,
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
   chartContent: {
     alignItems: 'center',
-    paddingVertical: 18,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
   },
-  chartStyleNew: {
-    marginVertical: 12,
+  chartStyle: {
+    marginVertical: 8,
     borderRadius: 16,
-    backgroundColor: 'transparent',
+    // paddingRight: 16,
   },
-  progressChartContainerNew: {
+  progressChartContainer: {
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 22,
-    minHeight: 240,
+    paddingVertical: 16,
+    minHeight: 220,
   },
   progressTextWrapper: {
     position: 'absolute',
@@ -635,59 +833,186 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   progressPercentageText: {
-    fontSize: 38,
+    fontSize: 42,
     fontWeight: '800',
   },
   progressLabelText: {
-    fontSize: 16,
-    fontWeight: '400',
-    marginTop: 6,
-    opacity: 0.8,
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: 4,
   },
-  modernChartContainer: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 18,
-    padding: 18,
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+  progressStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  progressStatusIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  progressStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  lineChartContainer: {
+    width: '100%',
+    alignItems: 'center',
+    paddingLeft: 10, // Added padding for Y-axis labels
+  },
+  chartLegend: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 8,
+  },
+  legendColor: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 6,
+  },
+  legendText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  // Custom pie chart styles to avoid label collision
+  customPieChartContainer: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+  },
+  pieChartWrapper: {
+    width: '50%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  customLegendContainer: {
+    width: '50%',
+    paddingLeft: 10,
+  },
+  customLegendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  customLegendColor: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    marginRight: 8,
+  },
+  customLegendTextContainer: {
+    flex: 1,
+  },
+  customLegendName: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  customLegendPercentage: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  typeCompletionContainer: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  modernChartTitle: {
+  typeComparisonContainer: {
+    width: '50%',
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+  },
+  typeComparisonItem: {
+    alignItems: 'center',
+  },
+  typeComparisonDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    marginHorizontal: 10,
+  },
+  typeIndicator: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  typeLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  typeValue: {
     fontSize: 20,
     fontWeight: '700',
-    marginBottom: 8,
-    color: '#23262F',
-    alignSelf: 'center',
   },
-  modernBarChart: {
-    borderRadius: 12,
-    backgroundColor: 'transparent',
-    marginVertical: 0,
-    alignSelf: 'center',
-  },
-  axisLabelsRow: {
-    flexDirection: 'row',
-    width: '100%',
+  statsCardsContainer: {
     marginTop: 8,
-    alignItems: 'center',
+    marginBottom: 24,
+  },
+  statsRow: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: 16,
   },
-  axisLabelX: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#23262F',
-    alignSelf: 'flex-end',
+  // Stat cards with reduced border
+  statCard: {
+    width: '48%',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 21 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 3,
   },
-  axisLabelY: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#23262F',
-    alignSelf: 'flex-start',
+  statCardGradient: {
+    borderRadius: 16,
+    padding: 12, // Reduced padding
+  },
+  statCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statIconContainer: {
+    width: 40, // Reduced size
+    height: 40, // Reduced size
+    borderRadius: 10, // Reduced border radius
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10, // Reduced margin
+  },
+  statIcon: {
+    fontSize: 18, // Reduced size
+  },
+  statTextContainer: {
+    flex: 1,
+  },
+  statTitle: {
+    fontSize: 13, // Reduced size
+    fontWeight: '500',
+    marginBottom: 2, // Reduced margin
+  },
+  statValue: {
+    fontSize: 18, // Reduced size
+    fontWeight: '700',
   },
 });
 
-export default TimeAnalyticsScreen;
+export default CompletionAnalyticsScreen;

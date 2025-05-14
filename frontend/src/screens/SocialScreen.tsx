@@ -39,7 +39,6 @@ const SocialTab = ({ navigation }: any) => {
         const data = await fetchUsers();
         setUsers(data);
         setFilteredUsers(data);
-        // console.log(data);
       } catch (error) {
         console.error("Failed to load users:", error);
       }
@@ -49,9 +48,10 @@ const SocialTab = ({ navigation }: any) => {
       try {
         const data = await fetchFriendshipDetails();
         const statusMap: { [key: number]: string } = {};
-
-        data.forEach((request: { friend: number; status: string }) => {
+        
+        data.forEach((request: { friend: number; user: number; status: string }) => {
           statusMap[request.friend] = request.status;
+          statusMap[request.user] = request.status;
         });
 
         setFriendshipStatuses(statusMap);
@@ -64,7 +64,6 @@ const SocialTab = ({ navigation }: any) => {
       try {
         const data = await fetchFriendRequests();
         setFriendRequests(data);
-        //console.log(data);
       } catch (error) {
         console.error("Failed to load friend requests:", error);
       }
@@ -103,17 +102,17 @@ const SocialTab = ({ navigation }: any) => {
   ) => {
     try {
       await respondToFriendRequest(requestId, action);
-      // Update the friend requests list
-      setFriendRequests((prev) =>
-        prev.map((request) =>
-          request.id === requestId
-            ? {
-                ...request,
-                status: action === "Accept" ? "Accepted" : "Rejected",
-              }
-            : request
-        )
-      );
+      const updatedRequests = friendRequests.filter(request => request.id !== requestId);
+      setFriendRequests(updatedRequests);
+      
+      const request = friendRequests.find(r => r.id === requestId);
+      if (request) {
+        setFriendshipStatuses((prev) => ({
+          ...prev,
+          [request.friend]: action === "Accept" ? "Accepted" : "Rejected",
+          [request.user]: action === "Accept" ? "Accepted" : "Rejected",
+        }));
+      }
     } catch (error) {
       console.error("Failed to respond to friend request:", error);
       Alert.alert("Error", "Failed to respond to friend request.");
@@ -135,57 +134,41 @@ const SocialTab = ({ navigation }: any) => {
       <FlatList
         data={filteredUsers}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => {
-          // console.log(item);
-          // console.log(friendshipStatuses[item.id]);
-          return (
-            <View style={styles.listItem}>
-              <Image
-                source={
-                  item.profile_picture
-                    ? { uri: item.profile_picture }
-                    : require("../../assets/default_user.jpg")
-                }
-                style={styles.avatar}
-              />
+        renderItem={({ item }) => (
+          <View style={styles.listItem}>
+            <Image
+              source={
+                item.profile_picture
+                  ? { uri: item.profile_picture }
+                  : require("../../assets/default_user.jpg")
+              }
+              style={styles.avatar}
+            />
 
-              <View style={styles.textContainer}>
-                <Text style={styles.name}>
-                  {item.first_name} {item.last_name}
-                </Text>
-                {/* <Text style={styles.lastMessage}>no messages yet</Text> */}
-              </View>
-
-              {friendshipStatuses[item.id] === "Accepted" ? (
-                <View style={[styles.addButton, { backgroundColor: "gray" }]}>
-                  <Text style={{ color: "#FFF", textAlign: "center" }}>
-                    Friends
-                  </Text>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={[
-                    styles.addButton,
-                    {
-                      backgroundColor:
-                        friendshipStatuses[item.id] === "Pending"
-                          ? "rgba(40, 29, 17, 0.9)"
-                          : "rgba(197, 110, 50, 0.9)",
-                    },
-                  ]}
-                  onPress={() => handleSendRequest(item.id)}
-                  disabled={friendshipStatuses[item.id] === "Pending"}
-                >
-                  <Text style={{ color: "#FFF", textAlign: "center" }}>
-                    {friendshipStatuses[item.id] === "Pending"
-                      ? "Pending"
-                      : "Add"}
-                  </Text>
-                </TouchableOpacity>
-              )}
+            <View style={styles.textContainer}>
+              <Text style={styles.name}>
+                {item.first_name} {item.last_name}
+              </Text>
             </View>
-          );
-        }}
+
+            {friendshipStatuses[item.id] === "Accepted" ? (
+              <View style={[styles.addButton, { backgroundColor: "gray" }]}>
+                <Text style={{ color: "#FFF", textAlign: "center" }}>Friends</Text>
+              </View>
+            ) : friendshipStatuses[item.id] === "Pending" ? (
+              <View style={[styles.addButton, { backgroundColor: "rgba(40, 29, 17, 0.9)" }]}>
+                <Text style={{ color: "#FFF", textAlign: "center" }}>Pending</Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[styles.addButton, { backgroundColor: "rgba(197, 110, 50, 0.9)" }]}
+                onPress={() => handleSendRequest(item.id)}
+              >
+                <Text style={{ color: "#FFF", textAlign: "center" }}>Add</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
         contentContainerStyle={styles.listContainer}
       />
     </>
@@ -200,53 +183,43 @@ const SocialTab = ({ navigation }: any) => {
       <FlatList
         data={friendRequests}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => {
-          //  console.log(item);
-          return (
-            <View style={styles.listItem}>
-              <Image
-                source={
-                  item.profile_picture
-                    ? { uri: item.profile_picture }
-                    : require("../../assets/default_user.jpg")
-                }
-                style={styles.avatar}
-              />
-              {/* <Image source={{ uri: 'https://via.placeholder.com/50' }} style={styles.avatar} /> */}
+        renderItem={({ item }) => (
+          <View style={styles.listItem}>
+            <Image
+              source={
+                item.profile_picture
+                  ? { uri: item.profile_picture }
+                  : require("../../assets/default_user.jpg")
+              }
+              style={styles.avatar}
+            />
 
-              <View style={styles.textContainer}>
-                <Text style={styles.name}>
-                  {item.first_name} {item.last_name}
-                </Text>
-                <Text style={styles.lastMessage}>{item.status}</Text>
-              </View>
-
-              {item.status === "Pending" && (
-                <View style={styles.actionsContainer}>
-                  <TouchableOpacity
-                    style={[
-                      styles.actionButton,
-                      { backgroundColor: "#4CAF50" },
-                    ]}
-                    onPress={() => handleRespondToRequest(item.id, "Accept")}
-                  >
-                    <Text style={{ color: "#FFF" }}>Accept</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.actionButton,
-                      { backgroundColor: "#F44336" },
-                    ]}
-                    onPress={() => handleRespondToRequest(item.id, "Reject")}
-                  >
-                    <Text style={{ color: "#FFF" }}>Reject</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
+            <View style={styles.textContainer}>
+              <Text style={styles.name}>
+                {item.first_name} {item.last_name}
+              </Text>
+              <Text style={styles.lastMessage}>{item.status}</Text>
             </View>
-          );
-        }}
+
+            {item.status === "Pending" && (
+              <View style={styles.actionsContainer}>
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: "#4CAF50" }]}
+                  onPress={() => handleRespondToRequest(item.id, "Accept")}
+                >
+                  <Text style={{ color: "#FFF" }}>Accept</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: "#F44336" }]}
+                  onPress={() => handleRespondToRequest(item.id, "Reject")}
+                >
+                  <Text style={{ color: "#FFF" }}>Reject</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
         contentContainerStyle={styles.listContainer}
       />
     </>
@@ -256,27 +229,21 @@ const SocialTab = ({ navigation }: any) => {
     <View style={styles.container}>
       <View style={styles.tabContainer}>
         <TouchableOpacity
-          style={
-            activeTab === "findFriends" ? styles.activeTab : styles.inactiveTab
-          }
+          style={activeTab === "findFriends" ? styles.activeTab : styles.inactiveTab}
           onPress={() => setActiveTab("findFriends")}
         >
           <Text style={styles.tabText}>Find Friends</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={
-            activeTab === "requests" ? styles.activeTab : styles.inactiveTab
-          }
+          style={activeTab === "requests" ? styles.activeTab : styles.inactiveTab}
           onPress={() => setActiveTab("requests")}
         >
           <Text style={styles.tabText}>Requests</Text>
         </TouchableOpacity>
       </View>
 
-      {activeTab === "findFriends"
-        ? renderFindFriendsTab()
-        : renderRequestsTab()}
+      {activeTab === "findFriends" ? renderFindFriendsTab() : renderRequestsTab()}
     </View>
   );
 };
@@ -357,7 +324,6 @@ const styles = StyleSheet.create({
   },
   addButton: {
     paddingVertical: 6,
-    // paddingHorizontal: 30,
     borderRadius: 16,
     width: 100,
   },
