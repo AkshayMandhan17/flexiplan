@@ -48,7 +48,7 @@ const makeAuthenticatedRequest = async (
 
     return response;
   } catch (error) {
-    console.error("Error in authenticated request:", error);
+    // console.error("Error in authenticated request:", error);
     throw error;
   }
 };
@@ -386,7 +386,7 @@ export const fetchUserRoutines = async (): Promise<UserRoutineResponse> => {
     const data: UserRoutineResponse = await response.json();
     return data;
   } catch (error) {
-    console.error("Error fetching user routines:", error);
+    // console.error("Error fetching user routines:", error);
     throw error;
   }
 };
@@ -679,8 +679,8 @@ export const fetchFriendRoutine = async (friendId: number) => {
       routine_data: data.routine_data,
     };
   } catch (error: any) {
-    console.error("Error fetching friend's routine:", error);
-    Alert.alert("Error", error.message || "Failed to fetch friend's routine.");
+    // console.error("Error fetching friend's routine:", error);
+    // Alert.alert("Alert", error.message || "Friend's routine does not exist.");
     throw error;
   }
 };
