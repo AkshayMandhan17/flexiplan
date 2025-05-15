@@ -5,11 +5,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Routine, RoutineActivityCompletion, Task, User, UserRoutine  # Import your custom User model
+# from .models import Routine, RoutineActivityCompletion, Task, User, UserRoutine  # Import your custom User model
+from .models import Routine, RoutineActivityCompletion, Task, User, UserRoutine, Friendship  # Import your custom User model
 from .serializers import SignupSerializer, LoginSerializer, TaskSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework import serializers
+from django.db import models
 
 # Signup View
 class SignupView(APIView):
@@ -85,6 +87,35 @@ class RefreshTokenView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+class FriendsListView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """Get all friends of the authenticated user."""
+        try:
+            # Get all accepted friendships where the user is either the user or friend
+            friendships = Friendship.objects.filter(
+                (models.Q(user=request.user) | models.Q(friend=request.user)),
+                status="Accepted"
+            )
+
+            friends_list = []
+            for friendship in friendships:
+                # Determine which user is the friend (not the current user)
+                friend_user = friendship.friend if friendship.user == request.user else friendship.user
+                
+                friends_list.append({
+                    'id': friend_user.id,
+                    'username': friend_user.username,
+                    'first_name': friend_user.first_name,
+                    'last_name': friend_user.last_name,
+                    'profile_picture': friend_user.profile_picture.url if friend_user.profile_picture else None
+                })
+
+            return Response(friends_list, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # API for user-specific tasks
 class UserTasksView(APIView):
@@ -183,23 +214,47 @@ class UserRoutineView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+# class UploadUserPfp(APIView):
+#     authentication_classes = [JWTAuthentication]  # Ensure the user is authenticated
+#     permission_classes = [IsAuthenticated]  # Only authenticated users can upload a profile picture
+
+#     def put(self, request):
+#         """Upload a new profile picture (as a URL or base64 string) for the user."""
+#         user = request.user  # Get the currently authenticated user
+#         profile_picture = request.data.get('profile_picture')
+
+#         if not profile_picture:
+#             return Response({"error": "No profile picture provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+#         # Update the user's profile picture with the provided string (URL or base64)
+#         user.profile_picture = profile_picture
+#         user.save()
+
+#         return Response({"message": "Profile picture uploaded successfully!"}, status=status.HTTP_200_OK)
+
 class UploadUserPfp(APIView):
-    authentication_classes = [JWTAuthentication]  # Ensure the user is authenticated
-    permission_classes = [IsAuthenticated]  # Only authenticated users can upload a profile picture
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
 
     def put(self, request):
-        """Upload a new profile picture (as a URL or base64 string) for the user."""
-        user = request.user  # Get the currently authenticated user
-        profile_picture = request.data.get('profile_picture')
+        """Upload a new profile picture file for the user."""
+        user = request.user
+        profile_picture_file = request.FILES.get('profile_picture')
 
-        if not profile_picture:
-            return Response({"error": "No profile picture provided."}, status=status.HTTP_400_BAD_REQUEST)
+        if not profile_picture_file:
+            return Response({"error": "No profile picture file provided."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Update the user's profile picture with the provided string (URL or base64)
-        user.profile_picture = profile_picture
+        user.profile_picture = profile_picture_file
         user.save()
 
-        return Response({"message": "Profile picture uploaded successfully!"}, status=status.HTTP_200_OK)
+        profile_picture_url = None
+        if user.profile_picture:
+             profile_picture_url = request.build_absolute_uri(user.profile_picture.url)
+
+        return Response({
+            "message": "Profile picture uploaded successfully!",
+            "profile_picture_url": profile_picture_url # Return the new public URL
+        }, status=status.HTTP_200_OK)
 
 class MarkActivityCompletedView(APIView):
     authentication_classes = [JWTAuthentication]

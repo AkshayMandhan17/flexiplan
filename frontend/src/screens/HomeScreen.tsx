@@ -44,6 +44,7 @@ import * as ImagePicker from "expo-image-picker";
 import { API_BASE_URL } from "../config";
 import LottieView from "lottie-react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { color } from "react-native-elements/dist/helpers";
 
 const SettingsStack = createStackNavigator();
 const windowHeight = Dimensions.get("window").height;
@@ -76,13 +77,13 @@ type AnalysisCategory = {
   lottiename: string;
 };
 
-const THEME_COLOR = 'rgba(197, 110, 50, 1)';
-const THEME_COLOR_LIGHT = 'rgba(197, 110, 50, 0.1)';
-const THEME_COLOR_DARK = 'rgba(197, 110, 50, 0.8)';
-const BACKGROUND_COLOR = '#F5F5F5';
-const CARD_BACKGROUND = '#FFFFFF';
-const TEXT_PRIMARY = '#333333';
-const TEXT_SECONDARY = '#666666';
+const THEME_COLOR = "rgba(197, 110, 50, 1)";
+const THEME_COLOR_LIGHT = "rgba(197, 110, 50, 0.1)";
+const THEME_COLOR_DARK = "rgba(197, 110, 50, 0.8)";
+const BACKGROUND_COLOR = "#F5F5F5";
+const CARD_BACKGROUND = "#FFFFFF";
+const TEXT_PRIMARY = "#333333";
+const TEXT_SECONDARY = "#666666";
 
 const HomeScreen = () => {
   const [profilePic, setProfilePic] = useState<string | null>(null);
@@ -111,37 +112,37 @@ const HomeScreen = () => {
       id: "1",
       name: "Completion Analytics",
       screen: "CompletionAnalytics",
-      lottiename: "Completion"
+      lottiename: "Completion",
     },
     {
       id: "2",
       name: "Time Analytics",
       screen: "TimeAnalytics",
-      lottiename: "Time"
+      lottiename: "Time",
     },
     {
       id: "3",
       name: "Activity Frequency",
       screen: "ActivityFrequency",
-      lottiename: "Activity"
+      lottiename: "Activity",
     },
     {
       id: "4",
       name: "Weekly Patterns",
       screen: "WeeklyPatterns",
-      lottiename: "Weekly"
+      lottiename: "Weekly",
     },
     {
       id: "5",
       name: "Time Balance",
       screen: "TimeBalance",
-      lottiename: "TimeBalance"
+      lottiename: "TimeBalance",
     },
     {
       id: "6",
       name: "Consistency Score",
       screen: "ConsistencyScore",
-      lottiename: "Consistency"
+      lottiename: "Consistency",
     },
   ];
 
@@ -177,10 +178,25 @@ const HomeScreen = () => {
         quality: 1,
       });
       if (!pickerResult.canceled) {
-        const newProfilePic = pickerResult.assets[0].uri;
-        setProfilePic(newProfilePic);
-        // Call the API to upload the profile picture
-        await uploadUserPfp(newProfilePic); // Upload the profile picture
+        const localImageUri = pickerResult.assets[0].uri;
+        try {
+          // Show a loading indicator here ideally
+          const uploadResponse = await uploadUserPfp(localImageUri); // Upload the file
+
+          if (uploadResponse && uploadResponse.profile_picture_url) {
+            // Update state with the NEW public URL from the server response
+            setProfilePic(uploadResponse.profile_picture_url);
+            // Optionally update currentUser state if needed
+          } else {
+            // Handle upload failure (Alerts are shown in api.ts)
+            // Maybe revert to old picture or keep local URI temporarily?
+          }
+          // Hide loading indicator
+        } catch (error) {
+          // Hide loading indicator
+          console.error("Upload failed in component:", error);
+          // Alert might have already been shown by api.ts
+        }
       }
     } catch (error) {
       console.error("Error picking image:", error);
@@ -205,10 +221,22 @@ const HomeScreen = () => {
         quality: 1,
       });
       if (!cameraResult.canceled) {
-        const newProfilePic = cameraResult.assets[0].uri;
-        setProfilePic(newProfilePic);
-        // Call the API to upload the profile picture
-        await uploadUserPfp(newProfilePic); // Upload the profile picture
+        const localImageUri = cameraResult.assets[0].uri;
+        try {
+          // Show a loading indicator here ideally
+          const uploadResponse = await uploadUserPfp(localImageUri); // Upload the file
+
+          if (uploadResponse && uploadResponse.profile_picture_url) {
+            // Update state with the NEW public URL from the server response
+            setProfilePic(uploadResponse.profile_picture_url);
+          } else {
+            // Handle upload failure
+          }
+          // Hide loading indicator
+        } catch (error) {
+          // Hide loading indicator
+          console.error("Upload failed in component:", error);
+        }
       }
     } catch (error) {
       console.error("Error taking photo:", error);
@@ -305,32 +333,11 @@ const HomeScreen = () => {
       IconName: "tasks",
     },
     {
-      id: "4",
-      title: "View Saved Routines",
-      action: () => console.log("View Saved Routines"), // Replace with actual navigation
-      IconFamily: "FontAwesome",
-      IconName: "life-saver",
-    },
-    {
       id: "5",
       title: "View Friends",
       action: () => navigation.navigate("FriendsScreen"),
       IconFamily: "Icon",
       IconName: "people-outline",
-    },
-    {
-      id: "6",
-      title: "Update Username",
-      action: () => console.log("Update Username"), //  Implement username update logic
-      IconFamily: "FontAwesome",
-      IconName: "user",
-    },
-    {
-      id: "7",
-      title: "Change Password",
-      action: () => console.log("Change Password"), // Implement password change logic
-      IconFamily: "MaterialIcons",
-      IconName: "password",
     },
     {
       id: "8", // Add a new ID
@@ -354,6 +361,11 @@ const HomeScreen = () => {
         const savedUsername = await AsyncStorage.getItem("user_username");
         if (savedUsername) {
           setUsername(savedUsername);
+          const userDetails = await fetchPublicUserDetails(savedUsername);
+          setCurrentUser(userDetails);
+          if (userDetails.profile_picture != null) {
+            setProfilePic(API_BASE_URL + userDetails.profile_picture);
+          }
         }
       } catch (error) {
         console.error("Failed to fetch username from AsyncStorage:", error);
@@ -455,11 +467,17 @@ const HomeScreen = () => {
               </TouchableOpacity>
             </View>
           </View>
-          {/* <Text style={styles.username}>
-          {currentUser
-            ? `${currentUser.first_name} ${currentUser.last_name}`
-            : "Loading..."}
-        </Text> */}
+          <Text
+            style={{
+              marginTop: 5,
+              color: "white",
+              fontSize: 20,
+            }}
+          >
+            {currentUser
+              ? `${currentUser.first_name} ${currentUser.last_name}`
+              : "Loading..."}
+          </Text>
         </View>
         <Modal
           visible={showPopup}
@@ -651,7 +669,7 @@ const HomeScreen = () => {
   const removeTask = async (id: string) => {
     try {
       const taskToRemove = tasks.find((task) => task.id === id);
-      if (!taskToRemove) return;      
+      if (!taskToRemove) return;
 
       // Call the API to remove the activity
       await removeActivityFromRoutine(
@@ -731,20 +749,20 @@ const HomeScreen = () => {
 
   const getLottieSource = (lottiename: string) => {
     switch (lottiename) {
-      case 'Activity':
-        return require('../../lotties/Activity.json');
-      case 'Completion':
-        return require('../../lotties/Completion.json');
-      case 'Time':
-        return require('../../lotties/Time.json');
-      case 'Weekly':
-        return require('../../lotties/Weekly.json');
-      case 'TimeBalance':
-        return require('../../lotties/TimeBalance.json');
-      case 'Consistency':
-        return require('../../lotties/Consistency.json');
+      case "Activity":
+        return require("../../lotties/Activity.json");
+      case "Completion":
+        return require("../../lotties/Completion.json");
+      case "Time":
+        return require("../../lotties/Time.json");
+      case "Weekly":
+        return require("../../lotties/Weekly.json");
+      case "TimeBalance":
+        return require("../../lotties/TimeBalance.json");
+      case "Consistency":
+        return require("../../lotties/Consistency.json");
       default:
-        return require('../../lotties/Activity.json');
+        return require("../../lotties/Activity.json");
     }
   };
 
@@ -762,7 +780,7 @@ const HomeScreen = () => {
         >
           <View style={styles.lottieContainer}>
             <LottieView
-              ref={ref => animationRefs.current[item.id] = ref}
+              ref={(ref) => (animationRefs.current[item.id] = ref)}
               source={getLottieSource(item.lottiename)}
               autoPlay
               loop
@@ -779,13 +797,13 @@ const HomeScreen = () => {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <LinearGradient
-        colors={[BACKGROUND_COLOR, 'rgba(197, 110, 50, 0.7)']}
+        colors={[BACKGROUND_COLOR, "rgba(197, 110, 50, 0.7)"]}
         style={styles.gradientBackground}
       >
         <TouchableOpacity style={styles.sidebarToggle} onPress={toggleSidebar}>
           <Icon name="menu-outline" size={30} color="black" />
         </TouchableOpacity>
-        
+
         {isSidebarVisible && (
           <>
             <TouchableOpacity
@@ -797,7 +815,11 @@ const HomeScreen = () => {
           </>
         )}
 
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 50 }}
+        >
           <View style={styles.analysisSection}>
             <Text style={styles.sectionTitle}>Routine Analysis</Text>
             <FlatList
@@ -829,7 +851,7 @@ const HomeScreen = () => {
           ) : (
             <View style={styles.tasksSection}>
               <View style={styles.dateNavigation}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.navButton}
                   onPress={() => changeDay(-1)}
                 >
@@ -839,11 +861,15 @@ const HomeScreen = () => {
                   <Text style={styles.dateHeading}>{getSectionHeading()}</Text>
                   <Text style={styles.dateText}>{getCurrentDayText()}</Text>
                 </View>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.navButton}
                   onPress={() => changeDay(1)}
                 >
-                  <Icon name="chevron-forward-outline" size={24} color="#76c7c0" />
+                  <Icon
+                    name="chevron-forward-outline"
+                    size={24}
+                    color="#76c7c0"
+                  />
                 </TouchableOpacity>
               </View>
 
@@ -903,7 +929,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: TEXT_PRIMARY,
     marginLeft: 20,
     marginBottom: 20,
@@ -921,13 +947,13 @@ const styles = StyleSheet.create({
     marginRight: 12,
     marginLeft: 4,
     marginVertical: 8,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   activeRoutineCard: {
     backgroundColor: CARD_BACKGROUND,
@@ -940,18 +966,18 @@ const styles = StyleSheet.create({
   },
   lottieContainer: {
     height: 100,
-    width: '100%',
+    width: "100%",
     marginBottom: 16,
   },
   lottieAnimation: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   routineName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: TEXT_PRIMARY,
-    textAlign: 'center',
+    textAlign: "center",
     paddingHorizontal: 8,
   },
   tasksSection: {
@@ -959,9 +985,9 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   dateNavigation: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 24,
     paddingHorizontal: 10,
   },
@@ -972,13 +998,13 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
   dateInfo: {
-    alignItems: 'center',
+    alignItems: "center",
     flex: 1,
     paddingHorizontal: 10,
   },
   dateHeading: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: TEXT_PRIMARY,
     marginBottom: 4,
   },
@@ -987,14 +1013,14 @@ const styles = StyleSheet.create({
     color: THEME_COLOR,
   },
   taskItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: CARD_BACKGROUND,
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
     marginHorizontal: 4,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -1005,8 +1031,8 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 16,
   },
   taskEmoji: {
@@ -1018,7 +1044,7 @@ const styles = StyleSheet.create({
   },
   taskName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: TEXT_PRIMARY,
     marginBottom: 4,
   },
@@ -1028,8 +1054,8 @@ const styles = StyleSheet.create({
   },
   noRoutineContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
     marginTop: 40,
   },
@@ -1042,7 +1068,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: TEXT_PRIMARY,
     marginBottom: 24,
-    textAlign: 'center',
+    textAlign: "center",
     paddingHorizontal: 20,
   },
   generateButton: {
@@ -1057,21 +1083,21 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   generateButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   overlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
     zIndex: 1,
   },
   sidebarToggle: {
-    position: 'absolute',
+    position: "absolute",
     top: 50,
     right: 20,
     zIndex: 2,

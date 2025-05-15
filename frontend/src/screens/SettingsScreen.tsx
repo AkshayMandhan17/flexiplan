@@ -163,24 +163,9 @@ const SettingsScreen = () => {
       action: () => navigation.navigate("UserTasks"),
     },
     {
-      id: "3",
-      title: "View Saved Routines",
-      action: () => console.log("View Saved Routines"), // Replace with actual navigation
-    },
-    {
       id: "4",
       title: "View Friends",
       action: () => navigation.navigate("FriendsScreen"),
-    },
-    {
-      id: "5",
-      title: "Update Username",
-      action: () => console.log("Update Username"), //  Implement username update logic
-    },
-    {
-      id: "6",
-      title: "Change Password",
-      action: () => console.log("Change Password"), // Implement password change logic
     },
     { id: "7", title: "Logout", action: handleLogout },
   ];
